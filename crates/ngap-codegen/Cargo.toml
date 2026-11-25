@@ -1,0 +1,18 @@
+[package]
+name = "ngap-codegen"
+description = "Generator: TS 38.413 docx -> ASN.1 modules -> Rust (hand-written)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+zip.workspace = true
+sha2.workspace = true
+toml.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,12 @@
+# Where the NGAP ASN.1 comes from. The spec is NOT vendored in this repository.
+# `cargo xtask extract-asn` reads the 3GPP TS 38.413 Word document from `specs/38413-j40.docx` (git-ignored)
+# unless `--docx <file>` or the `NGAP_SPEC_DOCX` environment variable is given, and writes the six ASN.1 modules to
+# `specs/asn1/` (git-ignored). Download: https://www.3gpp.org/ftp/Specs/archive/38_series/38.413/ (file 38413-j40.zip).
+spec = "TS 38.413"
+title = "NG Application Protocol (NGAP)"
+release = "Rel-19"
+version = "19.4.0"
+file = "38413-j40.docx"
+sha256 = "fb2cd9b8c2606da79aa0008faaedcc01ecd1de3ea1595242c35674215c7d66ef"
+# transfer syntax of the ASN.1 (ITU-T X.691), see README "Wire format"
+encoding = "ALIGNED-PER"
