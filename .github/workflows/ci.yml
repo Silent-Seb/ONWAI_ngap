@@ -1,0 +1,60 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # The 3GPP specification is not vendored (see NOTICE.md), so the tests that read `specs/asn1` skip here.
+  # `env -u CI` makes them skip instead of fail.
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.100.0"
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: env -u CI cargo test --workspace
+
+  # Regenerate from the pinned specification and compare with what is committed. Needs the spec: set the repository
+  # variable NGAP_SPEC_URL to a place the job can download TS 38.413 v19.4.0 (`38413-j40.docx`) from; the download is
+  # verified against the SHA-256 in codegen/spec-source.toml by `cargo xtask extract-asn`.
+  spec:
+    if: ${{ vars.NGAP_SPEC_URL != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.100.0"
+      - uses: Swatinem/rust-cache@v2
+      - run: mkdir -p specs && curl -fsSL "${{ vars.NGAP_SPEC_URL }}" -o specs/38413-j40.docx
+      - run: cargo xtask extract-asn
+      - run: cargo xtask check
+      - run: cargo test --workspace
+
+  # Compare the sampled vectors with an independent APER implementation (Python `asn1tools`).
+  oracle:
+    if: ${{ vars.NGAP_SPEC_URL != '' }}
+    needs: spec
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.100.0"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install asn1tools==0.169.0
+      - run: mkdir -p specs && curl -fsSL "${{ vars.NGAP_SPEC_URL }}" -o specs/38413-j40.docx
+      - run: cargo xtask extract-asn
+      - run: python3 tools/oracle_asn.py specs/asn1 oracle_asn
+      - run: python3 tools/check_vectors.py oracle_asn testdata
