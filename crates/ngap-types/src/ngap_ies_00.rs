@@ -1370,8 +1370,8 @@ impl rt::AperDecode for AiotRequestedServiceAreaInformation {
 pub struct AiotSessionReleaseCommandTransfer {
     /// `id-AIoT-CorrelationIdentifier` (id 466, Reject, Mandatory)
     pub aiot_correlation_identifier: AiotCorrelationIdentifier,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
     pub unknown_ies: Vec<rt::ie::RawIe>,
 }
@@ -1381,7 +1381,7 @@ impl AiotSessionReleaseCommandTransfer {
     pub fn new(aiot_correlation_identifier: AiotCorrelationIdentifier, cause: Cause) -> Self {
         Self {
             aiot_correlation_identifier,
-            cause,
+            cause: Some(cause),
             unknown_ies: Vec::new(),
         }
     }
@@ -1395,8 +1395,7 @@ impl rt::AperEncode for AiotSessionReleaseCommandTransfer {
             let x = &self.aiot_correlation_identifier;
             ies.push(rt::ie::RawIe::new(466, rt::ie::Criticality::Reject, x)?);
         }
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         ies.extend(self.unknown_ies.iter().cloned());
@@ -1425,7 +1424,7 @@ impl rt::AperDecode for AiotSessionReleaseCommandTransfer {
         }
         Ok(Self {
             aiot_correlation_identifier: rt::ie::required(s_aiot_correlation_identifier, 466, rt::ie::Criticality::Reject)?,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             unknown_ies,
         })
     }

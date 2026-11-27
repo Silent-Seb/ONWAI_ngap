@@ -1,7 +1,7 @@
 //! Checks added by a review of the repository against the specification and against real data:
 //! * the N2 SM containers of the captured PDU Session Resource Setup (nested APER, encoded by another implementation);
 //! * `PrivateMessage` (no sampled vectors exist for it);
-//! * what happens when a mandatory IE with criticality "ignore" is missing (clause 10.3.5).
+//! * a mandatory IE with criticality "ignore" that is missing is tolerated (clause 10.3.5), one with "reject" is not.
 
 use ngap_aper::{
     BitWriter, Size,
@@ -90,24 +90,55 @@ fn a_private_message_with_local_and_global_ids_round_trips() {
 }
 
 /// 10.3.5: a message that misses an IE with criticality "Ignore" is processed with the other IEs.
-/// `DefaultPagingDRX` (id 21) of the NG Setup Request is `Ignore, Mandatory`.
-///
-/// KNOWN GAP (see CLAUDE.md, "Deferred work", item 3): the typed message cannot hold an absent mandatory IE, so the
-/// facade returns an abstract syntax error whatever the criticality, and `reaction()` then asks for an NG Setup Failure.
-/// 125 of the 350 mandatory IEs are `Ignore` (both UE NGAP IDs among them). Run with `--ignored` to see it fail.
+/// `DefaultPagingDRX` (id 21) of the NG Setup Request is `Ignore, Mandatory`: it decodes with the field `None`.
 #[test]
-#[ignore = "known deviation from clause 10.3.5: a missing mandatory IE is always an error"]
-fn a_missing_mandatory_ie_with_criticality_ignore_must_not_reject_the_message() {
+fn a_missing_mandatory_ie_with_criticality_ignore_is_tolerated() {
     let all = capture();
-    let bytes = &all[0];
-    // rebuild the NG Setup Request without IE 21
+    let without = without_ie(&all[0], 21);
+
+    let decoded = decode_pdu(&without).expect("clause 10.3.5: ignore the missing IE and continue");
+    assert!(
+        decoded.issues.is_empty(),
+        "\"Ignore\" is tolerated silently"
+    );
+    assert!(!decoded.needs_report());
+    let NgapPdu::InitiatingMessage(InitiatingMessage::NgSetupRequest(r)) = &decoded.pdu else {
+        panic!("not an NG Setup Request")
+    };
+    assert_eq!(r.default_paging_drx, None);
+    assert!(r.ran_node_name.is_some(), "the other IEs are kept");
+
+    // the absent IE stays absent on the wire: decode -> encode reproduces the received octets
+    assert_eq!(encode_pdu(&decoded.pdu).unwrap(), without);
+}
+
+/// A mandatory IE with criticality "Reject" that is missing still rejects the procedure.
+#[test]
+fn a_missing_mandatory_ie_with_criticality_reject_still_rejects() {
+    let all = capture();
+    let without = without_ie(&all[0], 27); // GlobalRANNodeID: Reject, Mandatory
+    let Err(DecodeError::AbstractSyntax(a)) = decode_pdu(&without) else {
+        panic!("expected an abstract syntax error")
+    };
+    assert_eq!(a.issues.len(), 1);
+    assert_eq!(a.issues[0].ie_id, 27);
+    assert_eq!(a.issues[0].criticality, Criticality::Reject);
+    assert_eq!(
+        DecodeError::AbstractSyntax(a).reaction(),
+        Reaction::UnsuccessfulOutcome
+    );
+}
+
+/// The PDU `bytes` rebuilt without the IE `id`.
+fn without_ie(bytes: &[u8], id: u32) -> Vec<u8> {
     let mut r = ngap_aper::BitReader::new(bytes);
     let alt = r.read_index(3, true).unwrap();
     let (code, crit, content) = ngap_aper::ie::read_procedure(&mut r).unwrap();
     let mut c = ngap_aper::BitReader::new(&content);
     c.read_bit().unwrap();
     let ies: Vec<RawIe> = read_container(&mut c, Size::range(0, 65535)).unwrap();
-    let kept: Vec<RawIe> = ies.into_iter().filter(|ie| ie.id != 21).collect();
+    assert!(ies.iter().any(|ie| ie.id == id), "the PDU has IE {id}");
+    let kept: Vec<RawIe> = ies.into_iter().filter(|ie| ie.id != id).collect();
 
     struct Message<'a>(&'a [RawIe]);
     impl ngap_aper::AperEncode for Message<'_> {
@@ -119,25 +150,5 @@ fn a_missing_mandatory_ie_with_criticality_ignore_must_not_reject_the_message() 
     let mut w = BitWriter::new();
     w.write_index(alt, 3, true).unwrap();
     write_procedure(&mut w, code, crit, &Message(&kept)).unwrap();
-    let without = w.into_complete_bytes();
-
-    match decode_pdu(&without) {
-        Ok(_) => {} // what the specification asks for
-        Err(DecodeError::AbstractSyntax(a)) => {
-            // the codec cannot represent the absent IE; at the very least it must not tell the caller to reject
-            // the procedure on account of an IE whose criticality is "Ignore"
-            let missing_is_ignore = a
-                .issues
-                .iter()
-                .all(|i| i.criticality == Criticality::Ignore);
-            assert!(missing_is_ignore, "unexpected issues {:?}", a.issues);
-            let e = DecodeError::AbstractSyntax(a);
-            assert_ne!(
-                e.reaction(),
-                Reaction::UnsuccessfulOutcome,
-                "rejects an NG Setup Request over a missing IE that clause 10.3.5 says to ignore"
-            );
-        }
-        Err(other) => panic!("unexpected error {other:?}"),
-    }
+    w.into_complete_bytes()
 }

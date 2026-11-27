@@ -26,6 +26,11 @@ project is pre-alpha and not published to crates.io (`publish = false`), so ther
   `deny.toml` and a `deny` CI job (`cargo deny check`: licences, advisories, sources, bans).
 
 ### Changed
+- **Breaking, generated API:** a mandatory IE whose criticality is not "Reject" is now an `Option<T>` field (125 of the 350 mandatory IEs of
+  Rel-19, e.g. both UE NGAP IDs in most messages), because clause 10.3.5 tolerates its absence. `new(..)` still takes the plain value.
+  Decoding a message that omits such an IE succeeds (`None`; "Notify" ones are listed in `Decoded.issues`), encoding writes nothing for `None`.
+  Before, such a message was rejected and `reaction()` asked for a failure message. "Reject" ones still reject. `ngap_aper::ie::record_unknown_ies`
+  became `record_findings` (unknown IEs and absent "Notify" IEs).
 - The six extracted ASN.1 modules are committed in `specs/asn1/` (unmodified; SHA-256 pinned, `tests/spec_modules.rs`), so the spec-dependent
   tests run everywhere, including CI, which no longer sets `env -u CI`. Before, CI skipped them and did not check that the generated code and
   `testdata/` match the generator.

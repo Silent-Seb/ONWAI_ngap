@@ -128,7 +128,7 @@ Hand-written crates are linted with `-D warnings`; `unsafe` is forbidden workspa
 
 Full rules: [`docs/mapping-rules.md`](docs/mapping-rules.md). In short: names are Rust-style (`NGSetupRequest` →
 `NgSetupRequest`, `pDUSessionID` → `pdu_session_id`); **the IEs of a message are its fields** (mandatory → `T`, optional →
-`Option<T>`, in spec order) plus `unknown_ies: Vec<RawIe>` for IEs the spec version does not define; every struct has
+`Option<T>`, in spec order; a mandatory IE whose criticality is not *reject* is also an `Option<T>`: clause 10.3.5 tolerates its absence) plus `unknown_ies: Vec<RawIe>` for IEs the spec version does not define; every struct has
 `new(<mandatory fields>)`; `OCTET STRING (CONTAINING T)` is `Contained<T>`, raw bytes that are only decoded on request;
 `iE-Extensions` are typed where the spec defines members and raw otherwise; `NgapPdu` is the CHOICE of
 `InitiatingMessage` / `SuccessfulOutcome` / `UnsuccessfulOutcome`, enums with one variant per procedure message.
@@ -254,7 +254,9 @@ and criticality), so even a PDU whose body is broken is reported with the proced
 | not valid APER; message type unreadable; trailing octets | 10.2, 10.3.4.1A | `TransferSyntax { error, context }` | `ErrorIndication` | transfer-syntax-error |
 | procedure code not defined | 10.3.4.1 | `UnknownProcedure` | reject / notify → `ErrorIndication`, ignore → `Ignore` | abstract-syntax-error-reject / -ignore-and-notify |
 | unknown IE with criticality *reject* (the message's own IEs) | 10.3.4.2 | `AbstractSyntax { issues }` | initiating, procedure has a failure message → `UnsuccessfulOutcome`; without → `ErrorIndication`; response → `LocalErrorHandling` | abstract-syntax-error-reject |
-| mandatory IE missing (any depth) | 10.3.5 | `AbstractSyntax { issues: [Missing] }` | as above | reject / ignore-and-notify by the IE's criticality |
+| mandatory IE with criticality *reject* missing (any depth) | 10.3.5 | `AbstractSyntax { issues: [Missing] }` | as above | abstract-syntax-error-reject |
+| mandatory IE with criticality *ignore* missing | 10.3.5 | **not an error**: the field is `None`; nothing to report | | |
+| mandatory IE with criticality *notify* missing | 10.3.5 | **not an error**: the field is `None`, listed in `Decoded.issues` (no IE of Rel-19 has this combination) | | |
 | IEs in the wrong order (top level), IE twice (any depth) | 10.3.6 | `AbstractSyntax { construction }` | as above | falsely-constructed-message |
 | unknown IE with criticality *notify* / *ignore* | 10.3.4.2 | **not an error**: `Decoded.issues`; `needs_report()` / `criticality_diagnostics()` for *notify* | | |
 
@@ -263,13 +265,10 @@ builds the Error Indication message (cause + Criticality Diagnostics: procedure 
 criticality, one item per IE); `criticality_diagnostics()` and `cause()` serve a failure message the same way. The codec sends
 nothing: the caller fills in the AP IDs it knows and transmits.
 
-Limits, on purpose and stated: the first problem found is reported (clause 10.3.1 wants all of them); a missing mandatory IE is
-an error whatever its criticality (clause 10.3.5 wants "Ignore" and "Ignore and Notify" ones tolerated: 125 of the 350 mandatory
-IEs are "Ignore"), because the typed message cannot hold an absent mandatory field, and `reaction()` then asks for the failure
-message or an Error Indication all the same; conditional IEs that are
+Limits, on purpose and stated: the first problem found is reported (clause 10.3.1 wants all of them); conditional IEs that are
 erroneously present (10.3.3) and logical errors (10.4) need state or semantics and are not detected. Unknown IEs are examined at
 any depth (message, list items, extension containers): the generated decoders call `ngap_aper::ie::note_unknown` for each one and
-the facade collects them with `record_unknown_ies` (a thread-local scope); the diagnostics list each distinct problem once,
+the facade collects them with `record_findings` (a thread-local scope); the diagnostics list each distinct problem once,
 at most 256 (`maxnoofErrors`). `DecodeOptions::enforce_ie_order(false)` accepts known IEs in any
 order for a sloppy peer.
 
@@ -377,7 +376,7 @@ Moving to a new 3GPP release: replace the docx, update `codegen/spec-source.toml
 
 ## Verification
 
-What exists today (all green; `cargo test --workspace` runs about 140 tests):
+What exists today (all green; `cargo test --workspace` runs about 160 tests):
 
 1. `extract-asn` yields the six modules (14,685 lines); `ngap_codegen` parses them and the AST counts equal independent
    token counts (`tests/parse_ngap.rs`); the IR counts are pinned (`tests/ir_ngap.rs`: 1,297 types, 227 IE sets, 469 extension

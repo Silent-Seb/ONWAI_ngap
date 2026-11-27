@@ -53,13 +53,10 @@ unless asked). CI `build-and-test` is green on every push so far (checked 2026-1
 2. ~~First CI run~~ done and green. The extracted ASN.1 is committed (`specs/asn1`), so the spec-dependent tests (census, IR gates, generated
    code and testdata up to date) now run in CI too; the optional `spec`/`oracle` jobs (repo variable `NGAP_SPEC_URL`) additionally re-extract from
    the docx (`git diff --exit-code specs/asn1`) and compare with the Python oracle.
-3. **Clause 10 gaps in the facade** (`crates/onwai-ngap`), what is left: only the first problem is reported; **a missing mandatory IE
-   is always an error and `reaction()` then asks for a rejection, although 10.3.5 says to continue when its criticality is Ignore or
-   Notify (125 of 350 mandatory IEs are Ignore; executable spec: the `#[ignore]`d test in `tests/review.rs`; also `cause()` then says
-   IgnoreAndNotify while `reaction()` says reject)**. Options: make those fields `Option` on decode, or fill a placeholder and list
-   the ids in `Decoded`, or keep the limit and document it. Needs a decision; conditional IEs
-   that are present when they must not be, and logical errors (10.4), need semantics/state. Done: unknown IEs at any depth are
-   examined (`ngap_aper::ie::record_unknown_ies`, hooked into the three generated sinks).
+3. **Clause 10 gaps in the facade** (`crates/onwai-ngap`), what is left: only the first problem is reported; conditional IEs that are present
+   when they must not be, and logical errors (10.4), need semantics/state. Done: unknown IEs at any depth are examined
+   (`ngap_aper::ie::record_findings`, hooked into the three generated sinks); a missing mandatory IE whose criticality is not `reject` is
+   tolerated per 10.3.5 (the field is an `Option`, generated; `notify` ones are reported via the same recorder).
 4. ~~`cargo-fuzz` target~~ done: `fuzz/` (needs nightly, `cargo install cargo-fuzz`; see `fuzz/README.md`). Longer runs (hours) and a
    fuzz job in CI are still open.
 5. ~~Rust-side coverage of standalone types~~ done: `crates/ngap-types/tests/all_types.rs` via the generated `round_trip_by_name`.

@@ -5,109 +5,13 @@ use ngap_aper as rt;
 use rt::{AperDecode as _, AperEncode as _};
 use crate::*;
 
-/// ASN.1 `MTCommunicationHandlingFailure` (NGAP-PDU-Contents): the IEs of the message are the fields.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct MtCommunicationHandlingFailure {
-    /// `id-AMF-UE-NGAP-ID` (id 10, Reject, Mandatory)
-    pub amf_ue_ngap_id: AmfUeNgapId,
-    /// `id-RAN-UE-NGAP-ID` (id 85, Reject, Mandatory)
-    pub ran_ue_ngap_id: RanUeNgapId,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
-    /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
-    pub criticality_diagnostics: Option<CriticalityDiagnostics>,
-    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
-    pub unknown_ies: Vec<rt::ie::RawIe>,
-}
-
-impl MtCommunicationHandlingFailure {
-    /// A value with the mandatory IEs given and every optional one absent.
-    pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId, cause: Cause) -> Self {
-        Self {
-            amf_ue_ngap_id,
-            ran_ue_ngap_id,
-            cause,
-            criticality_diagnostics: None,
-            unknown_ies: Vec::new(),
-        }
-    }
-}
-
-impl rt::AperEncode for MtCommunicationHandlingFailure {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        w.write_bit(false); // extension marker: no additions
-        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.amf_ue_ngap_id;
-            ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Reject, x)?);
-        }
-        {
-            let x = &self.ran_ue_ngap_id;
-            ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Reject, x)?);
-        }
-        {
-            let x = &self.cause;
-            ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
-        }
-        if let Some(x) = &self.criticality_diagnostics {
-            ies.push(rt::ie::RawIe::new(19, rt::ie::Criticality::Ignore, x)?);
-        }
-        ies.extend(self.unknown_ies.iter().cloned());
-        rt::ie::write_container(w, rt::Size::range(0, 65535), &ies)
-    }
-}
-
-impl rt::AperDecode for MtCommunicationHandlingFailure {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let extension = r.read_bit()?;
-        let mut s_amf_ue_ngap_id: Option<AmfUeNgapId> = None;
-        let mut s_ran_ue_ngap_id: Option<RanUeNgapId> = None;
-        let mut s_cause: Option<Cause> = None;
-        let mut s_criticality_diagnostics: Option<CriticalityDiagnostics> = None;
-        let mut unknown_ies = Vec::new();
-        for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
-            match ie.id {
-                10 => rt::ie::set_once(&mut s_amf_ue_ngap_id, 10, ie.decode()?)?,
-                85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
-                15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
-                19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => {
-                    rt::ie::note_unknown(&ie);
-                    unknown_ies.push(ie)
-                }
-            }
-        }
-        if extension {
-            r.read_extension_additions()?;
-        }
-        Ok(Self {
-            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Reject)?,
-            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Reject)?,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
-            criticality_diagnostics: s_criticality_diagnostics,
-            unknown_ies,
-        })
-    }
-}
-
-impl MtCommunicationHandlingFailure {
-    /// The ids of the IEs this version of the specification defines for the message, in the order the
-    /// specification requires them on the wire.
-    pub const IE_IDS: &'static [u32] = &[10, 85, 15, 19];
-
-    /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
-    pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {
-        rt::ie::wire_ie_ids(content, true, rt::Size::range(0, 65535))
-    }
-}
-
 /// ASN.1 `RANPagingRequest` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RanPagingRequest {
-    /// `id-AMF-UE-NGAP-ID` (id 10, Ignore, Mandatory)
-    pub amf_ue_ngap_id: AmfUeNgapId,
-    /// `id-RAN-UE-NGAP-ID` (id 85, Ignore, Mandatory)
-    pub ran_ue_ngap_id: RanUeNgapId,
+    /// `id-AMF-UE-NGAP-ID` (id 10, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub amf_ue_ngap_id: Option<AmfUeNgapId>,
+    /// `id-RAN-UE-NGAP-ID` (id 85, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub ran_ue_ngap_id: Option<RanUeNgapId>,
     /// `id-PagingPolicyDifferentiation` (id 407, Ignore, Optional)
     pub paging_policy_differentiation: Option<PagingPolicyDifferentiation>,
     /// `id-DL-Signalling` (id 408, Ignore, Optional)
@@ -120,8 +24,8 @@ impl RanPagingRequest {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId) -> Self {
         Self {
-            amf_ue_ngap_id,
-            ran_ue_ngap_id,
+            amf_ue_ngap_id: Some(amf_ue_ngap_id),
+            ran_ue_ngap_id: Some(ran_ue_ngap_id),
             paging_policy_differentiation: None,
             dl_signalling: None,
             unknown_ies: Vec::new(),
@@ -133,12 +37,10 @@ impl rt::AperEncode for RanPagingRequest {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.amf_ue_ngap_id;
+        if let Some(x) = &self.amf_ue_ngap_id {
             ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.ran_ue_ngap_id;
+        if let Some(x) = &self.ran_ue_ngap_id {
             ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.paging_policy_differentiation {
@@ -176,8 +78,8 @@ impl rt::AperDecode for RanPagingRequest {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Ignore)?,
-            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Ignore)?,
+            amf_ue_ngap_id: rt::ie::tolerate_missing(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Ignore),
+            ran_ue_ngap_id: rt::ie::tolerate_missing(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Ignore),
             paging_policy_differentiation: s_paging_policy_differentiation,
             dl_signalling: s_dl_signalling,
             unknown_ies,
@@ -382,14 +284,14 @@ impl InventoryResponse {
 /// ASN.1 `InventoryFailure` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InventoryFailure {
-    /// `id-AIOTFIdentifier` (id 467, Ignore, Mandatory)
-    pub aiotf_identifier: AiotfIdentifier,
-    /// `id-AIoT-CorrelationIdentifier` (id 466, Ignore, Mandatory)
-    pub aiot_correlation_identifier: AiotCorrelationIdentifier,
-    /// `id-InventoryFailureTransfer` (id 458, Ignore, Mandatory)
-    pub inventory_failure_transfer: rt::Contained<InventoryFailureTransfer>,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-AIOTFIdentifier` (id 467, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub aiotf_identifier: Option<AiotfIdentifier>,
+    /// `id-AIoT-CorrelationIdentifier` (id 466, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub aiot_correlation_identifier: Option<AiotCorrelationIdentifier>,
+    /// `id-InventoryFailureTransfer` (id 458, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub inventory_failure_transfer: Option<rt::Contained<InventoryFailureTransfer>>,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
     pub criticality_diagnostics: Option<CriticalityDiagnostics>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
@@ -400,10 +302,10 @@ impl InventoryFailure {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(aiotf_identifier: AiotfIdentifier, aiot_correlation_identifier: AiotCorrelationIdentifier, inventory_failure_transfer: rt::Contained<InventoryFailureTransfer>, cause: Cause) -> Self {
         Self {
-            aiotf_identifier,
-            aiot_correlation_identifier,
-            inventory_failure_transfer,
-            cause,
+            aiotf_identifier: Some(aiotf_identifier),
+            aiot_correlation_identifier: Some(aiot_correlation_identifier),
+            inventory_failure_transfer: Some(inventory_failure_transfer),
+            cause: Some(cause),
             criticality_diagnostics: None,
             unknown_ies: Vec::new(),
         }
@@ -414,20 +316,16 @@ impl rt::AperEncode for InventoryFailure {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.aiotf_identifier;
+        if let Some(x) = &self.aiotf_identifier {
             ies.push(rt::ie::RawIe::new(467, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.aiot_correlation_identifier;
+        if let Some(x) = &self.aiot_correlation_identifier {
             ies.push(rt::ie::RawIe::new(466, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.inventory_failure_transfer;
+        if let Some(x) = &self.inventory_failure_transfer {
             ies.push(rt::ie::RawIe::new(458, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.criticality_diagnostics {
@@ -464,10 +362,10 @@ impl rt::AperDecode for InventoryFailure {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            aiotf_identifier: rt::ie::required(s_aiotf_identifier, 467, rt::ie::Criticality::Ignore)?,
-            aiot_correlation_identifier: rt::ie::required(s_aiot_correlation_identifier, 466, rt::ie::Criticality::Ignore)?,
-            inventory_failure_transfer: rt::ie::required(s_inventory_failure_transfer, 458, rt::ie::Criticality::Ignore)?,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            aiotf_identifier: rt::ie::tolerate_missing(s_aiotf_identifier, 467, rt::ie::Criticality::Ignore),
+            aiot_correlation_identifier: rt::ie::tolerate_missing(s_aiot_correlation_identifier, 466, rt::ie::Criticality::Ignore),
+            inventory_failure_transfer: rt::ie::tolerate_missing(s_inventory_failure_transfer, 458, rt::ie::Criticality::Ignore),
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             criticality_diagnostics: s_criticality_diagnostics,
             unknown_ies,
         })
@@ -778,16 +676,16 @@ impl CommandResponse {
 /// ASN.1 `CommandFailure` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandFailure {
-    /// `id-AIOTFIdentifier` (id 467, Ignore, Mandatory)
-    pub aiotf_identifier: AiotfIdentifier,
-    /// `id-AIoT-CorrelationIdentifier` (id 466, Ignore, Mandatory)
-    pub aiot_correlation_identifier: AiotCorrelationIdentifier,
-    /// `id-RAN-AIOT-Device-NGAP-ID` (id 472, Ignore, Mandatory)
-    pub ran_aiot_device_ngap_id: RanAiotDeviceNgapId,
-    /// `id-CommandFailureTransfer` (id 462, Ignore, Mandatory)
-    pub command_failure_transfer: rt::Contained<CommandFailureTransfer>,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-AIOTFIdentifier` (id 467, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub aiotf_identifier: Option<AiotfIdentifier>,
+    /// `id-AIoT-CorrelationIdentifier` (id 466, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub aiot_correlation_identifier: Option<AiotCorrelationIdentifier>,
+    /// `id-RAN-AIOT-Device-NGAP-ID` (id 472, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub ran_aiot_device_ngap_id: Option<RanAiotDeviceNgapId>,
+    /// `id-CommandFailureTransfer` (id 462, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub command_failure_transfer: Option<rt::Contained<CommandFailureTransfer>>,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
     pub criticality_diagnostics: Option<CriticalityDiagnostics>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
@@ -798,11 +696,11 @@ impl CommandFailure {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(aiotf_identifier: AiotfIdentifier, aiot_correlation_identifier: AiotCorrelationIdentifier, ran_aiot_device_ngap_id: RanAiotDeviceNgapId, command_failure_transfer: rt::Contained<CommandFailureTransfer>, cause: Cause) -> Self {
         Self {
-            aiotf_identifier,
-            aiot_correlation_identifier,
-            ran_aiot_device_ngap_id,
-            command_failure_transfer,
-            cause,
+            aiotf_identifier: Some(aiotf_identifier),
+            aiot_correlation_identifier: Some(aiot_correlation_identifier),
+            ran_aiot_device_ngap_id: Some(ran_aiot_device_ngap_id),
+            command_failure_transfer: Some(command_failure_transfer),
+            cause: Some(cause),
             criticality_diagnostics: None,
             unknown_ies: Vec::new(),
         }
@@ -813,24 +711,19 @@ impl rt::AperEncode for CommandFailure {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.aiotf_identifier;
+        if let Some(x) = &self.aiotf_identifier {
             ies.push(rt::ie::RawIe::new(467, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.aiot_correlation_identifier;
+        if let Some(x) = &self.aiot_correlation_identifier {
             ies.push(rt::ie::RawIe::new(466, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.ran_aiot_device_ngap_id;
+        if let Some(x) = &self.ran_aiot_device_ngap_id {
             ies.push(rt::ie::RawIe::new(472, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.command_failure_transfer;
+        if let Some(x) = &self.command_failure_transfer {
             ies.push(rt::ie::RawIe::new(462, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.criticality_diagnostics {
@@ -869,11 +762,11 @@ impl rt::AperDecode for CommandFailure {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            aiotf_identifier: rt::ie::required(s_aiotf_identifier, 467, rt::ie::Criticality::Ignore)?,
-            aiot_correlation_identifier: rt::ie::required(s_aiot_correlation_identifier, 466, rt::ie::Criticality::Ignore)?,
-            ran_aiot_device_ngap_id: rt::ie::required(s_ran_aiot_device_ngap_id, 472, rt::ie::Criticality::Ignore)?,
-            command_failure_transfer: rt::ie::required(s_command_failure_transfer, 462, rt::ie::Criticality::Ignore)?,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            aiotf_identifier: rt::ie::tolerate_missing(s_aiotf_identifier, 467, rt::ie::Criticality::Ignore),
+            aiot_correlation_identifier: rt::ie::tolerate_missing(s_aiot_correlation_identifier, 466, rt::ie::Criticality::Ignore),
+            ran_aiot_device_ngap_id: rt::ie::tolerate_missing(s_ran_aiot_device_ngap_id, 472, rt::ie::Criticality::Ignore),
+            command_failure_transfer: rt::ie::tolerate_missing(s_command_failure_transfer, 462, rt::ie::Criticality::Ignore),
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             criticality_diagnostics: s_criticality_diagnostics,
             unknown_ies,
         })
@@ -981,12 +874,12 @@ impl AiotSessionReleaseCommand {
 /// ASN.1 `AIOTSessionReleaseComplete` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AiotSessionReleaseComplete {
-    /// `id-AIOTFIdentifier` (id 467, Ignore, Mandatory)
-    pub aiotf_identifier: AiotfIdentifier,
-    /// `id-AIoT-CorrelationIdentifier` (id 466, Ignore, Mandatory)
-    pub aiot_correlation_identifier: AiotCorrelationIdentifier,
-    /// `id-AIOTSessionReleaseCompleteTransfer` (id 464, Ignore, Mandatory)
-    pub aiot_session_release_complete_transfer: rt::Contained<AiotSessionReleaseCompleteTransfer>,
+    /// `id-AIOTFIdentifier` (id 467, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub aiotf_identifier: Option<AiotfIdentifier>,
+    /// `id-AIoT-CorrelationIdentifier` (id 466, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub aiot_correlation_identifier: Option<AiotCorrelationIdentifier>,
+    /// `id-AIOTSessionReleaseCompleteTransfer` (id 464, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub aiot_session_release_complete_transfer: Option<rt::Contained<AiotSessionReleaseCompleteTransfer>>,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
     pub criticality_diagnostics: Option<CriticalityDiagnostics>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
@@ -997,9 +890,9 @@ impl AiotSessionReleaseComplete {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(aiotf_identifier: AiotfIdentifier, aiot_correlation_identifier: AiotCorrelationIdentifier, aiot_session_release_complete_transfer: rt::Contained<AiotSessionReleaseCompleteTransfer>) -> Self {
         Self {
-            aiotf_identifier,
-            aiot_correlation_identifier,
-            aiot_session_release_complete_transfer,
+            aiotf_identifier: Some(aiotf_identifier),
+            aiot_correlation_identifier: Some(aiot_correlation_identifier),
+            aiot_session_release_complete_transfer: Some(aiot_session_release_complete_transfer),
             criticality_diagnostics: None,
             unknown_ies: Vec::new(),
         }
@@ -1010,16 +903,13 @@ impl rt::AperEncode for AiotSessionReleaseComplete {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.aiotf_identifier;
+        if let Some(x) = &self.aiotf_identifier {
             ies.push(rt::ie::RawIe::new(467, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.aiot_correlation_identifier;
+        if let Some(x) = &self.aiot_correlation_identifier {
             ies.push(rt::ie::RawIe::new(466, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.aiot_session_release_complete_transfer;
+        if let Some(x) = &self.aiot_session_release_complete_transfer {
             ies.push(rt::ie::RawIe::new(464, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.criticality_diagnostics {
@@ -1054,9 +944,9 @@ impl rt::AperDecode for AiotSessionReleaseComplete {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            aiotf_identifier: rt::ie::required(s_aiotf_identifier, 467, rt::ie::Criticality::Ignore)?,
-            aiot_correlation_identifier: rt::ie::required(s_aiot_correlation_identifier, 466, rt::ie::Criticality::Ignore)?,
-            aiot_session_release_complete_transfer: rt::ie::required(s_aiot_session_release_complete_transfer, 464, rt::ie::Criticality::Ignore)?,
+            aiotf_identifier: rt::ie::tolerate_missing(s_aiotf_identifier, 467, rt::ie::Criticality::Ignore),
+            aiot_correlation_identifier: rt::ie::tolerate_missing(s_aiot_correlation_identifier, 466, rt::ie::Criticality::Ignore),
+            aiot_session_release_complete_transfer: rt::ie::tolerate_missing(s_aiot_session_release_complete_transfer, 464, rt::ie::Criticality::Ignore),
             criticality_diagnostics: s_criticality_diagnostics,
             unknown_ies,
         })

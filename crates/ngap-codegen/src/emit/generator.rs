@@ -759,6 +759,9 @@ impl rt::AperDecode for PrivateIe {
             field: String,
             r: RTy,
             optional: bool,
+            /// Mandatory, but its criticality is not "Reject": clause 10.3.5 tolerates its absence, so the field is an
+            /// `Option` (constructors still take the value).
+            soft: bool,
             id: u32,
             crit: &'static str,
             doc: String,
@@ -775,17 +778,25 @@ impl rt::AperDecode for PrivateIe {
             let field = self.field_name(&base, name, &mut seen)?;
             let r = self.lower(&row.ty, name, &base)?;
             let crit = crit_variant(row.criticality);
-            let doc = format!(
+            let soft =
+                row.presence == Presence::Mandatory && row.criticality != Criticality::Reject;
+            let mut doc = format!(
                 "`{}` (id {}, {:?}, {:?})",
                 row.id_name.as_deref().unwrap_or("-"),
                 row.id,
                 row.criticality,
                 row.presence
             );
+            if soft {
+                doc.push_str(
+                    ": `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written",
+                );
+            }
             fields.push(F {
                 field,
                 r,
                 optional: row.presence != Presence::Mandatory,
+                soft,
                 id: row.id,
                 crit,
                 doc,
@@ -811,7 +822,7 @@ impl rt::AperDecode for PrivateIe {
                 decl,
                 "    pub {}: {},",
                 f.field,
-                if f.optional {
+                if f.optional || f.soft {
                     format!("Option<{ty}>")
                 } else {
                     ty.clone()
@@ -819,6 +830,9 @@ impl rt::AperDecode for PrivateIe {
             );
             if f.optional {
                 let _ = writeln!(ctor, "            {}: None,", f.field);
+            } else if f.soft {
+                let _ = write!(args, "{}: {}, ", f.field, ty);
+                let _ = writeln!(ctor, "            {0}: Some({0}),", f.field);
             } else {
                 let _ = write!(args, "{}: {}, ", f.field, ty);
                 let _ = writeln!(ctor, "            {},", f.field);
@@ -839,7 +853,7 @@ impl rt::AperDecode for PrivateIe {
                     )
                 }
             };
-            if f.optional {
+            if f.optional || f.soft {
                 let _ = writeln!(
                     enc,
                     "        if let Some(x) = &self.{} {{\n            ies.push({});\n        }}",
@@ -873,6 +887,12 @@ impl rt::AperDecode for PrivateIe {
             );
             if f.optional {
                 let _ = writeln!(build, "            {0}: s_{0},", f.field);
+            } else if f.soft {
+                let _ = writeln!(
+                    build,
+                    "            {0}: rt::ie::tolerate_missing(s_{0}, {1}, rt::ie::Criticality::{2}),",
+                    f.field, f.id, f.crit
+                );
             } else {
                 let _ = writeln!(
                     build,

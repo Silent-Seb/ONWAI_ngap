@@ -144,36 +144,61 @@ pub fn required<T>(slot: Option<T>, id: u32, criticality: Criticality) -> Result
     slot.ok_or_else(|| crate::AperError::new(ErrorKind::MissingIe { id, criticality }, 0))
 }
 
+/// What the decoders met that clause 10 cares about but that does not stop decoding: IEs they do not know, and mandatory IEs
+/// that are absent although their criticality is "Notify" (10.3.5; "Ignore" ones need no report).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Findings {
+    /// IEs this version of the specification does not define at that place, in the order they were met, at any depth.
+    pub unknown: Vec<RawIe>,
+    /// `(id, criticality)` of the absent mandatory IEs that have to be reported to the sender.
+    pub missing: Vec<(u32, Criticality)>,
+}
+
 thread_local! {
-    static UNKNOWN_SINK: std::cell::RefCell<Option<Vec<RawIe>>> = const { std::cell::RefCell::new(None) };
+    static FINDINGS: std::cell::RefCell<Option<Findings>> = const { std::cell::RefCell::new(None) };
 }
 
 /// Called by generated decoders for every IE they do not know, at any nesting depth (message IEs, IEs of list items,
-/// extension IEs). It does nothing unless [`record_unknown_ies`] is active on this thread.
+/// extension IEs). It does nothing unless [`record_findings`] is active on this thread.
 pub fn note_unknown(ie: &RawIe) {
-    UNKNOWN_SINK.with(|s| {
-        if let Some(sink) = s.borrow_mut().as_mut() {
-            sink.push(ie.clone());
+    FINDINGS.with(|s| {
+        if let Some(f) = s.borrow_mut().as_mut() {
+            f.unknown.push(ie.clone());
         }
     });
 }
 
-/// Run `f` and also return every unknown IE that decoders met meanwhile (see [`note_unknown`]), in the order they were
-/// met. Scopes nest: an inner call gets only its own IEs, and the outer recording is restored afterwards, also when
-/// `f` panics.
-pub fn record_unknown_ies<T>(f: impl FnOnce() -> T) -> (T, Vec<RawIe>) {
-    struct Restore(Option<Vec<RawIe>>);
+/// Called for an absent mandatory IE that has to be reported (see [`Findings::missing`]).
+pub fn note_missing(id: u32, criticality: Criticality) {
+    FINDINGS.with(|s| {
+        if let Some(f) = s.borrow_mut().as_mut() {
+            f.missing.push((id, criticality));
+        }
+    });
+}
+
+/// Run `f` and also return what the decoders found meanwhile (see [`Findings`]). Scopes nest: an inner call gets only its
+/// own findings, and the outer recording is restored afterwards, also when `f` panics.
+pub fn record_findings<T>(f: impl FnOnce() -> T) -> (T, Findings) {
+    struct Restore(Option<Findings>);
     impl Drop for Restore {
         fn drop(&mut self) {
-            UNKNOWN_SINK.with(|s| *s.borrow_mut() = self.0.take());
+            FINDINGS.with(|s| *s.borrow_mut() = self.0.take());
         }
     }
-    let _restore = Restore(UNKNOWN_SINK.with(|s| s.borrow_mut().replace(Vec::new())));
+    let _restore = Restore(FINDINGS.with(|s| s.borrow_mut().replace(Findings::default())));
     let value = f();
-    let seen = UNKNOWN_SINK
-        .with(|s| s.borrow_mut().take())
-        .unwrap_or_default();
+    let seen = FINDINGS.with(|s| s.borrow_mut().take()).unwrap_or_default();
     (value, seen)
+}
+
+/// A mandatory IE whose criticality is not "Reject" may be absent (clause 10.3.5: "Ignore" is tolerated silently, "Notify" is
+/// tolerated and reported): the decoder keeps `None` instead of failing. Rejectable ones use [`required`].
+pub fn tolerate_missing<T>(slot: Option<T>, id: u32, criticality: Criticality) -> Option<T> {
+    if slot.is_none() && criticality == Criticality::Notify {
+        note_missing(id, criticality);
+    }
+    slot
 }
 
 /// The members of an extension container (`iE-Extensions`) that this version of the spec defines no type for.

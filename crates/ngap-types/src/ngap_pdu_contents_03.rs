@@ -5,73 +5,6 @@ use ngap_aper as rt;
 use rt::{AperDecode as _, AperEncode as _};
 use crate::*;
 
-/// ASN.1 `NGRemovalRequest` (NGAP-PDU-Contents): the IEs of the message are the fields.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct NgRemovalRequest {
-    /// `id-GlobalRANNodeID` (id 27, Reject, Mandatory)
-    pub global_ran_node_id: GlobalRanNodeId,
-    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
-    pub unknown_ies: Vec<rt::ie::RawIe>,
-}
-
-impl NgRemovalRequest {
-    /// A value with the mandatory IEs given and every optional one absent.
-    pub fn new(global_ran_node_id: GlobalRanNodeId) -> Self {
-        Self {
-            global_ran_node_id,
-            unknown_ies: Vec::new(),
-        }
-    }
-}
-
-impl rt::AperEncode for NgRemovalRequest {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        w.write_bit(false); // extension marker: no additions
-        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.global_ran_node_id;
-            ies.push(rt::ie::RawIe::new(27, rt::ie::Criticality::Reject, x)?);
-        }
-        ies.extend(self.unknown_ies.iter().cloned());
-        rt::ie::write_container(w, rt::Size::range(0, 65535), &ies)
-    }
-}
-
-impl rt::AperDecode for NgRemovalRequest {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let extension = r.read_bit()?;
-        let mut s_global_ran_node_id: Option<GlobalRanNodeId> = None;
-        let mut unknown_ies = Vec::new();
-        for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
-            match ie.id {
-                27 => rt::ie::set_once(&mut s_global_ran_node_id, 27, ie.decode()?)?,
-                _ => {
-                    rt::ie::note_unknown(&ie);
-                    unknown_ies.push(ie)
-                }
-            }
-        }
-        if extension {
-            r.read_extension_additions()?;
-        }
-        Ok(Self {
-            global_ran_node_id: rt::ie::required(s_global_ran_node_id, 27, rt::ie::Criticality::Reject)?,
-            unknown_ies,
-        })
-    }
-}
-
-impl NgRemovalRequest {
-    /// The ids of the IEs this version of the specification defines for the message, in the order the
-    /// specification requires them on the wire.
-    pub const IE_IDS: &'static [u32] = &[27];
-
-    /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
-    pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {
-        rt::ie::wire_ie_ids(content, true, rt::Size::range(0, 65535))
-    }
-}
-
 /// ASN.1 `NGRemovalResponse` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NgRemovalResponse {
@@ -160,8 +93,8 @@ impl NgRemovalResponse {
 /// ASN.1 `NGRemovalFailure` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NgRemovalFailure {
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
     pub criticality_diagnostics: Option<CriticalityDiagnostics>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
@@ -172,7 +105,7 @@ impl NgRemovalFailure {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(cause: Cause) -> Self {
         Self {
-            cause,
+            cause: Some(cause),
             criticality_diagnostics: None,
             unknown_ies: Vec::new(),
         }
@@ -183,8 +116,7 @@ impl rt::AperEncode for NgRemovalFailure {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.criticality_diagnostics {
@@ -215,7 +147,7 @@ impl rt::AperDecode for NgRemovalFailure {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             criticality_diagnostics: s_criticality_diagnostics,
             unknown_ies,
         })
@@ -242,8 +174,8 @@ pub struct NgSetupRequest {
     pub ran_node_name: Option<RanNodeName>,
     /// `id-SupportedTAList` (id 102, Reject, Mandatory)
     pub supported_ta_list: SupportedTaList,
-    /// `id-DefaultPagingDRX` (id 21, Ignore, Mandatory)
-    pub default_paging_drx: PagingDrx,
+    /// `id-DefaultPagingDRX` (id 21, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub default_paging_drx: Option<PagingDrx>,
     /// `id-UERetentionInformation` (id 147, Ignore, Optional)
     pub ue_retention_information: Option<UeRetentionInformation>,
     /// `id-NB-IoT-DefaultPagingDRX` (id 204, Ignore, Optional)
@@ -265,7 +197,7 @@ impl NgSetupRequest {
             global_ran_node_id,
             ran_node_name: None,
             supported_ta_list,
-            default_paging_drx,
+            default_paging_drx: Some(default_paging_drx),
             ue_retention_information: None,
             nb_iot_default_paging_drx: None,
             extended_ran_node_name: None,
@@ -291,8 +223,7 @@ impl rt::AperEncode for NgSetupRequest {
             let x = &self.supported_ta_list;
             ies.push(rt::ie::RawIe::new(102, rt::ie::Criticality::Reject, x)?);
         }
-        {
-            let x = &self.default_paging_drx;
+        if let Some(x) = &self.default_paging_drx {
             ies.push(rt::ie::RawIe::new(21, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.ue_retention_information {
@@ -352,7 +283,7 @@ impl rt::AperDecode for NgSetupRequest {
             global_ran_node_id: rt::ie::required(s_global_ran_node_id, 27, rt::ie::Criticality::Reject)?,
             ran_node_name: s_ran_node_name,
             supported_ta_list: rt::ie::required(s_supported_ta_list, 102, rt::ie::Criticality::Reject)?,
-            default_paging_drx: rt::ie::required(s_default_paging_drx, 21, rt::ie::Criticality::Ignore)?,
+            default_paging_drx: rt::ie::tolerate_missing(s_default_paging_drx, 21, rt::ie::Criticality::Ignore),
             ue_retention_information: s_ue_retention_information,
             nb_iot_default_paging_drx: s_nb_iot_default_paging_drx,
             extended_ran_node_name: s_extended_ran_node_name,
@@ -381,8 +312,8 @@ pub struct NgSetupResponse {
     pub amf_name: AmfName,
     /// `id-ServedGUAMIList` (id 96, Reject, Mandatory)
     pub served_guami_list: ServedGuamiList,
-    /// `id-RelativeAMFCapacity` (id 86, Ignore, Mandatory)
-    pub relative_amf_capacity: RelativeAmfCapacity,
+    /// `id-RelativeAMFCapacity` (id 86, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub relative_amf_capacity: Option<RelativeAmfCapacity>,
     /// `id-PLMNSupportList` (id 80, Reject, Mandatory)
     pub plmn_support_list: PlmnSupportList,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
@@ -409,7 +340,7 @@ impl NgSetupResponse {
         Self {
             amf_name,
             served_guami_list,
-            relative_amf_capacity,
+            relative_amf_capacity: Some(relative_amf_capacity),
             plmn_support_list,
             criticality_diagnostics: None,
             ue_retention_information: None,
@@ -435,8 +366,7 @@ impl rt::AperEncode for NgSetupResponse {
             let x = &self.served_guami_list;
             ies.push(rt::ie::RawIe::new(96, rt::ie::Criticality::Reject, x)?);
         }
-        {
-            let x = &self.relative_amf_capacity;
+        if let Some(x) = &self.relative_amf_capacity {
             ies.push(rt::ie::RawIe::new(86, rt::ie::Criticality::Ignore, x)?);
         }
         {
@@ -509,7 +439,7 @@ impl rt::AperDecode for NgSetupResponse {
         Ok(Self {
             amf_name: rt::ie::required(s_amf_name, 1, rt::ie::Criticality::Reject)?,
             served_guami_list: rt::ie::required(s_served_guami_list, 96, rt::ie::Criticality::Reject)?,
-            relative_amf_capacity: rt::ie::required(s_relative_amf_capacity, 86, rt::ie::Criticality::Ignore)?,
+            relative_amf_capacity: rt::ie::tolerate_missing(s_relative_amf_capacity, 86, rt::ie::Criticality::Ignore),
             plmn_support_list: rt::ie::required(s_plmn_support_list, 80, rt::ie::Criticality::Reject)?,
             criticality_diagnostics: s_criticality_diagnostics,
             ue_retention_information: s_ue_retention_information,
@@ -537,8 +467,8 @@ impl NgSetupResponse {
 /// ASN.1 `NGSetupFailure` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NgSetupFailure {
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// `id-TimeToWait` (id 107, Ignore, Optional)
     pub time_to_wait: Option<TimeToWait>,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
@@ -551,7 +481,7 @@ impl NgSetupFailure {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(cause: Cause) -> Self {
         Self {
-            cause,
+            cause: Some(cause),
             time_to_wait: None,
             criticality_diagnostics: None,
             unknown_ies: Vec::new(),
@@ -563,8 +493,7 @@ impl rt::AperEncode for NgSetupFailure {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.time_to_wait {
@@ -600,7 +529,7 @@ impl rt::AperDecode for NgSetupFailure {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             time_to_wait: s_time_to_wait,
             criticality_diagnostics: s_criticality_diagnostics,
             unknown_ies,
@@ -826,8 +755,8 @@ impl RanConfigurationUpdateAcknowledge {
 /// ASN.1 `RANConfigurationUpdateFailure` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RanConfigurationUpdateFailure {
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// `id-TimeToWait` (id 107, Ignore, Optional)
     pub time_to_wait: Option<TimeToWait>,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
@@ -840,7 +769,7 @@ impl RanConfigurationUpdateFailure {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(cause: Cause) -> Self {
         Self {
-            cause,
+            cause: Some(cause),
             time_to_wait: None,
             criticality_diagnostics: None,
             unknown_ies: Vec::new(),
@@ -852,8 +781,7 @@ impl rt::AperEncode for RanConfigurationUpdateFailure {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.time_to_wait {
@@ -889,7 +817,7 @@ impl rt::AperDecode for RanConfigurationUpdateFailure {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             time_to_wait: s_time_to_wait,
             criticality_diagnostics: s_criticality_diagnostics,
             unknown_ies,
@@ -1124,8 +1052,8 @@ impl AmfConfigurationUpdateAcknowledge {
 /// ASN.1 `AMFConfigurationUpdateFailure` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AmfConfigurationUpdateFailure {
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// `id-TimeToWait` (id 107, Ignore, Optional)
     pub time_to_wait: Option<TimeToWait>,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
@@ -1138,7 +1066,7 @@ impl AmfConfigurationUpdateFailure {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(cause: Cause) -> Self {
         Self {
-            cause,
+            cause: Some(cause),
             time_to_wait: None,
             criticality_diagnostics: None,
             unknown_ies: Vec::new(),
@@ -1150,8 +1078,7 @@ impl rt::AperEncode for AmfConfigurationUpdateFailure {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.time_to_wait {
@@ -1187,7 +1114,7 @@ impl rt::AperDecode for AmfConfigurationUpdateFailure {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             time_to_wait: s_time_to_wait,
             criticality_diagnostics: s_criticality_diagnostics,
             unknown_ies,
@@ -1276,8 +1203,8 @@ impl AmfStatusIndication {
 /// ASN.1 `NGReset` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NgReset {
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// `id-ResetType` (id 88, Reject, Mandatory)
     pub reset_type: ResetType,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
@@ -1288,7 +1215,7 @@ impl NgReset {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(cause: Cause, reset_type: ResetType) -> Self {
         Self {
-            cause,
+            cause: Some(cause),
             reset_type,
             unknown_ies: Vec::new(),
         }
@@ -1299,8 +1226,7 @@ impl rt::AperEncode for NgReset {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         {
@@ -1332,7 +1258,7 @@ impl rt::AperDecode for NgReset {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             reset_type: rt::ie::required(s_reset_type, 88, rt::ie::Criticality::Reject)?,
             unknown_ies,
         })
@@ -2465,6 +2391,103 @@ impl PwsFailureIndication {
     /// The ids of the IEs this version of the specification defines for the message, in the order the
     /// specification requires them on the wire.
     pub const IE_IDS: &'static [u32] = &[81, 27];
+
+    /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
+    pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {
+        rt::ie::wire_ie_ids(content, true, rt::Size::range(0, 65535))
+    }
+}
+
+/// ASN.1 `DownlinkUEAssociatedNRPPaTransport` (NGAP-PDU-Contents): the IEs of the message are the fields.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DownlinkUeAssociatedNrpPaTransport {
+    /// `id-AMF-UE-NGAP-ID` (id 10, Reject, Mandatory)
+    pub amf_ue_ngap_id: AmfUeNgapId,
+    /// `id-RAN-UE-NGAP-ID` (id 85, Reject, Mandatory)
+    pub ran_ue_ngap_id: RanUeNgapId,
+    /// `id-RoutingID` (id 89, Reject, Mandatory)
+    pub routing_id: RoutingId,
+    /// `id-NRPPa-PDU` (id 46, Reject, Mandatory)
+    pub nrp_pa_pdu: NrpPaPdu,
+    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
+    pub unknown_ies: Vec<rt::ie::RawIe>,
+}
+
+impl DownlinkUeAssociatedNrpPaTransport {
+    /// A value with the mandatory IEs given and every optional one absent.
+    pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId, routing_id: RoutingId, nrp_pa_pdu: NrpPaPdu) -> Self {
+        Self {
+            amf_ue_ngap_id,
+            ran_ue_ngap_id,
+            routing_id,
+            nrp_pa_pdu,
+            unknown_ies: Vec::new(),
+        }
+    }
+}
+
+impl rt::AperEncode for DownlinkUeAssociatedNrpPaTransport {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        w.write_bit(false); // extension marker: no additions
+        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
+        {
+            let x = &self.amf_ue_ngap_id;
+            ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Reject, x)?);
+        }
+        {
+            let x = &self.ran_ue_ngap_id;
+            ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Reject, x)?);
+        }
+        {
+            let x = &self.routing_id;
+            ies.push(rt::ie::RawIe::new(89, rt::ie::Criticality::Reject, x)?);
+        }
+        {
+            let x = &self.nrp_pa_pdu;
+            ies.push(rt::ie::RawIe::new(46, rt::ie::Criticality::Reject, x)?);
+        }
+        ies.extend(self.unknown_ies.iter().cloned());
+        rt::ie::write_container(w, rt::Size::range(0, 65535), &ies)
+    }
+}
+
+impl rt::AperDecode for DownlinkUeAssociatedNrpPaTransport {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let extension = r.read_bit()?;
+        let mut s_amf_ue_ngap_id: Option<AmfUeNgapId> = None;
+        let mut s_ran_ue_ngap_id: Option<RanUeNgapId> = None;
+        let mut s_routing_id: Option<RoutingId> = None;
+        let mut s_nrp_pa_pdu: Option<NrpPaPdu> = None;
+        let mut unknown_ies = Vec::new();
+        for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
+            match ie.id {
+                10 => rt::ie::set_once(&mut s_amf_ue_ngap_id, 10, ie.decode()?)?,
+                85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
+                89 => rt::ie::set_once(&mut s_routing_id, 89, ie.decode()?)?,
+                46 => rt::ie::set_once(&mut s_nrp_pa_pdu, 46, ie.decode()?)?,
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
+            }
+        }
+        if extension {
+            r.read_extension_additions()?;
+        }
+        Ok(Self {
+            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Reject)?,
+            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Reject)?,
+            routing_id: rt::ie::required(s_routing_id, 89, rt::ie::Criticality::Reject)?,
+            nrp_pa_pdu: rt::ie::required(s_nrp_pa_pdu, 46, rt::ie::Criticality::Reject)?,
+            unknown_ies,
+        })
+    }
+}
+
+impl DownlinkUeAssociatedNrpPaTransport {
+    /// The ids of the IEs this version of the specification defines for the message, in the order the
+    /// specification requires them on the wire.
+    pub const IE_IDS: &'static [u32] = &[10, 85, 89, 46];
 
     /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
     pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {

@@ -5,91 +5,6 @@ use ngap_aper as rt;
 use rt::{AperDecode as _, AperEncode as _};
 use crate::*;
 
-/// ASN.1 `BroadcastSessionModificationRequest` (NGAP-PDU-Contents): the IEs of the message are the fields.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BroadcastSessionModificationRequest {
-    /// `id-MBS-SessionID` (id 299, Reject, Mandatory)
-    pub mbs_session_id: MbsSessionId,
-    /// `id-MBS-ServiceArea` (id 298, Reject, Optional)
-    pub mbs_service_area: Option<MbsServiceArea>,
-    /// `id-MBSSessionModificationRequestTransfer` (id 349, Reject, Optional)
-    pub mbs_session_modification_request_transfer: Option<rt::Contained<MbsSessionSetupOrModRequestTransfer>>,
-    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
-    pub unknown_ies: Vec<rt::ie::RawIe>,
-}
-
-impl BroadcastSessionModificationRequest {
-    /// A value with the mandatory IEs given and every optional one absent.
-    pub fn new(mbs_session_id: MbsSessionId) -> Self {
-        Self {
-            mbs_session_id,
-            mbs_service_area: None,
-            mbs_session_modification_request_transfer: None,
-            unknown_ies: Vec::new(),
-        }
-    }
-}
-
-impl rt::AperEncode for BroadcastSessionModificationRequest {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        w.write_bit(false); // extension marker: no additions
-        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.mbs_session_id;
-            ies.push(rt::ie::RawIe::new(299, rt::ie::Criticality::Reject, x)?);
-        }
-        if let Some(x) = &self.mbs_service_area {
-            ies.push(rt::ie::RawIe::new(298, rt::ie::Criticality::Reject, x)?);
-        }
-        if let Some(x) = &self.mbs_session_modification_request_transfer {
-            ies.push(rt::ie::RawIe::new(349, rt::ie::Criticality::Reject, x)?);
-        }
-        ies.extend(self.unknown_ies.iter().cloned());
-        rt::ie::write_container(w, rt::Size::range(0, 65535), &ies)
-    }
-}
-
-impl rt::AperDecode for BroadcastSessionModificationRequest {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let extension = r.read_bit()?;
-        let mut s_mbs_session_id: Option<MbsSessionId> = None;
-        let mut s_mbs_service_area: Option<MbsServiceArea> = None;
-        let mut s_mbs_session_modification_request_transfer: Option<rt::Contained<MbsSessionSetupOrModRequestTransfer>> = None;
-        let mut unknown_ies = Vec::new();
-        for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
-            match ie.id {
-                299 => rt::ie::set_once(&mut s_mbs_session_id, 299, ie.decode()?)?,
-                298 => rt::ie::set_once(&mut s_mbs_service_area, 298, ie.decode()?)?,
-                349 => rt::ie::set_once(&mut s_mbs_session_modification_request_transfer, 349, ie.decode()?)?,
-                _ => {
-                    rt::ie::note_unknown(&ie);
-                    unknown_ies.push(ie)
-                }
-            }
-        }
-        if extension {
-            r.read_extension_additions()?;
-        }
-        Ok(Self {
-            mbs_session_id: rt::ie::required(s_mbs_session_id, 299, rt::ie::Criticality::Reject)?,
-            mbs_service_area: s_mbs_service_area,
-            mbs_session_modification_request_transfer: s_mbs_session_modification_request_transfer,
-            unknown_ies,
-        })
-    }
-}
-
-impl BroadcastSessionModificationRequest {
-    /// The ids of the IEs this version of the specification defines for the message, in the order the
-    /// specification requires them on the wire.
-    pub const IE_IDS: &'static [u32] = &[299, 298, 349];
-
-    /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
-    pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {
-        rt::ie::wire_ie_ids(content, true, rt::Size::range(0, 65535))
-    }
-}
-
 /// ASN.1 `BroadcastSessionModificationResponse` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BroadcastSessionModificationResponse {
@@ -182,8 +97,8 @@ pub struct BroadcastSessionModificationFailure {
     pub mbs_session_id: MbsSessionId,
     /// `id-MBSSessionModificationFailureTransfer` (id 348, Ignore, Optional)
     pub mbs_session_modification_failure_transfer: Option<rt::Contained<MbsSessionSetupOrModFailureTransfer>>,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
     pub criticality_diagnostics: Option<CriticalityDiagnostics>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
@@ -196,7 +111,7 @@ impl BroadcastSessionModificationFailure {
         Self {
             mbs_session_id,
             mbs_session_modification_failure_transfer: None,
-            cause,
+            cause: Some(cause),
             criticality_diagnostics: None,
             unknown_ies: Vec::new(),
         }
@@ -214,8 +129,7 @@ impl rt::AperEncode for BroadcastSessionModificationFailure {
         if let Some(x) = &self.mbs_session_modification_failure_transfer {
             ies.push(rt::ie::RawIe::new(348, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.criticality_diagnostics {
@@ -252,7 +166,7 @@ impl rt::AperDecode for BroadcastSessionModificationFailure {
         Ok(Self {
             mbs_session_id: rt::ie::required(s_mbs_session_id, 299, rt::ie::Criticality::Reject)?,
             mbs_session_modification_failure_transfer: s_mbs_session_modification_failure_transfer,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             criticality_diagnostics: s_criticality_diagnostics,
             unknown_ies,
         })
@@ -275,8 +189,8 @@ impl BroadcastSessionModificationFailure {
 pub struct BroadcastSessionReleaseRequest {
     /// `id-MBS-SessionID` (id 299, Reject, Mandatory)
     pub mbs_session_id: MbsSessionId,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
     pub unknown_ies: Vec<rt::ie::RawIe>,
 }
@@ -286,7 +200,7 @@ impl BroadcastSessionReleaseRequest {
     pub fn new(mbs_session_id: MbsSessionId, cause: Cause) -> Self {
         Self {
             mbs_session_id,
-            cause,
+            cause: Some(cause),
             unknown_ies: Vec::new(),
         }
     }
@@ -300,8 +214,7 @@ impl rt::AperEncode for BroadcastSessionReleaseRequest {
             let x = &self.mbs_session_id;
             ies.push(rt::ie::RawIe::new(299, rt::ie::Criticality::Reject, x)?);
         }
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         ies.extend(self.unknown_ies.iter().cloned());
@@ -330,7 +243,7 @@ impl rt::AperDecode for BroadcastSessionReleaseRequest {
         }
         Ok(Self {
             mbs_session_id: rt::ie::required(s_mbs_session_id, 299, rt::ie::Criticality::Reject)?,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             unknown_ies,
         })
     }
@@ -352,8 +265,8 @@ impl BroadcastSessionReleaseRequest {
 pub struct BroadcastSessionReleaseRequired {
     /// `id-MBS-SessionID` (id 299, Reject, Mandatory)
     pub mbs_session_id: MbsSessionId,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
     pub unknown_ies: Vec<rt::ie::RawIe>,
 }
@@ -363,7 +276,7 @@ impl BroadcastSessionReleaseRequired {
     pub fn new(mbs_session_id: MbsSessionId, cause: Cause) -> Self {
         Self {
             mbs_session_id,
-            cause,
+            cause: Some(cause),
             unknown_ies: Vec::new(),
         }
     }
@@ -377,8 +290,7 @@ impl rt::AperEncode for BroadcastSessionReleaseRequired {
             let x = &self.mbs_session_id;
             ies.push(rt::ie::RawIe::new(299, rt::ie::Criticality::Reject, x)?);
         }
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         ies.extend(self.unknown_ies.iter().cloned());
@@ -407,7 +319,7 @@ impl rt::AperDecode for BroadcastSessionReleaseRequired {
         }
         Ok(Self {
             mbs_session_id: rt::ie::required(s_mbs_session_id, 299, rt::ie::Criticality::Reject)?,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             unknown_ies,
         })
     }
@@ -677,10 +589,10 @@ impl BroadcastSessionTransportResponse {
 pub struct BroadcastSessionTransportFailure {
     /// `id-MBS-SessionID` (id 299, Reject, Mandatory)
     pub mbs_session_id: MbsSessionId,
-    /// `id-BroadcastTransportFailureTransfer` (id 417, Ignore, Mandatory)
-    pub broadcast_transport_failure_transfer: rt::Contained<BroadcastTransportFailureTransfer>,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-BroadcastTransportFailureTransfer` (id 417, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub broadcast_transport_failure_transfer: Option<rt::Contained<BroadcastTransportFailureTransfer>>,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
     pub criticality_diagnostics: Option<CriticalityDiagnostics>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
@@ -692,8 +604,8 @@ impl BroadcastSessionTransportFailure {
     pub fn new(mbs_session_id: MbsSessionId, broadcast_transport_failure_transfer: rt::Contained<BroadcastTransportFailureTransfer>, cause: Cause) -> Self {
         Self {
             mbs_session_id,
-            broadcast_transport_failure_transfer,
-            cause,
+            broadcast_transport_failure_transfer: Some(broadcast_transport_failure_transfer),
+            cause: Some(cause),
             criticality_diagnostics: None,
             unknown_ies: Vec::new(),
         }
@@ -708,12 +620,10 @@ impl rt::AperEncode for BroadcastSessionTransportFailure {
             let x = &self.mbs_session_id;
             ies.push(rt::ie::RawIe::new(299, rt::ie::Criticality::Reject, x)?);
         }
-        {
-            let x = &self.broadcast_transport_failure_transfer;
+        if let Some(x) = &self.broadcast_transport_failure_transfer {
             ies.push(rt::ie::RawIe::new(417, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.criticality_diagnostics {
@@ -749,8 +659,8 @@ impl rt::AperDecode for BroadcastSessionTransportFailure {
         }
         Ok(Self {
             mbs_session_id: rt::ie::required(s_mbs_session_id, 299, rt::ie::Criticality::Reject)?,
-            broadcast_transport_failure_transfer: rt::ie::required(s_broadcast_transport_failure_transfer, 417, rt::ie::Criticality::Ignore)?,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            broadcast_transport_failure_transfer: rt::ie::tolerate_missing(s_broadcast_transport_failure_transfer, 417, rt::ie::Criticality::Ignore),
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             criticality_diagnostics: s_criticality_diagnostics,
             unknown_ies,
         })
@@ -956,10 +866,10 @@ pub struct DistributionSetupFailure {
     pub mbs_session_id: MbsSessionId,
     /// `id-MBS-AreaSessionID` (id 295, Reject, Optional)
     pub mbs_area_session_id: Option<MbsAreaSessionId>,
-    /// `id-MBS-DistributionSetupUnsuccessfulTransfer` (id 303, Ignore, Mandatory)
-    pub mbs_distribution_setup_unsuccessful_transfer: rt::Contained<MbsDistributionSetupUnsuccessfulTransfer>,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-MBS-DistributionSetupUnsuccessfulTransfer` (id 303, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub mbs_distribution_setup_unsuccessful_transfer: Option<rt::Contained<MbsDistributionSetupUnsuccessfulTransfer>>,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
     pub criticality_diagnostics: Option<CriticalityDiagnostics>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
@@ -972,8 +882,8 @@ impl DistributionSetupFailure {
         Self {
             mbs_session_id,
             mbs_area_session_id: None,
-            mbs_distribution_setup_unsuccessful_transfer,
-            cause,
+            mbs_distribution_setup_unsuccessful_transfer: Some(mbs_distribution_setup_unsuccessful_transfer),
+            cause: Some(cause),
             criticality_diagnostics: None,
             unknown_ies: Vec::new(),
         }
@@ -991,12 +901,10 @@ impl rt::AperEncode for DistributionSetupFailure {
         if let Some(x) = &self.mbs_area_session_id {
             ies.push(rt::ie::RawIe::new(295, rt::ie::Criticality::Reject, x)?);
         }
-        {
-            let x = &self.mbs_distribution_setup_unsuccessful_transfer;
+        if let Some(x) = &self.mbs_distribution_setup_unsuccessful_transfer {
             ies.push(rt::ie::RawIe::new(303, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.criticality_diagnostics {
@@ -1035,8 +943,8 @@ impl rt::AperDecode for DistributionSetupFailure {
         Ok(Self {
             mbs_session_id: rt::ie::required(s_mbs_session_id, 299, rt::ie::Criticality::Reject)?,
             mbs_area_session_id: s_mbs_area_session_id,
-            mbs_distribution_setup_unsuccessful_transfer: rt::ie::required(s_mbs_distribution_setup_unsuccessful_transfer, 303, rt::ie::Criticality::Ignore)?,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            mbs_distribution_setup_unsuccessful_transfer: rt::ie::tolerate_missing(s_mbs_distribution_setup_unsuccessful_transfer, 303, rt::ie::Criticality::Ignore),
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             criticality_diagnostics: s_criticality_diagnostics,
             unknown_ies,
         })
@@ -1063,8 +971,8 @@ pub struct DistributionReleaseRequest {
     pub mbs_area_session_id: Option<MbsAreaSessionId>,
     /// `id-MBS-DistributionReleaseRequestTransfer` (id 300, Reject, Mandatory)
     pub mbs_distribution_release_request_transfer: rt::Contained<MbsDistributionReleaseRequestTransfer>,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
     pub unknown_ies: Vec<rt::ie::RawIe>,
 }
@@ -1076,7 +984,7 @@ impl DistributionReleaseRequest {
             mbs_session_id,
             mbs_area_session_id: None,
             mbs_distribution_release_request_transfer,
-            cause,
+            cause: Some(cause),
             unknown_ies: Vec::new(),
         }
     }
@@ -1097,8 +1005,7 @@ impl rt::AperEncode for DistributionReleaseRequest {
             let x = &self.mbs_distribution_release_request_transfer;
             ies.push(rt::ie::RawIe::new(300, rt::ie::Criticality::Reject, x)?);
         }
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         ies.extend(self.unknown_ies.iter().cloned());
@@ -1133,7 +1040,7 @@ impl rt::AperDecode for DistributionReleaseRequest {
             mbs_session_id: rt::ie::required(s_mbs_session_id, 299, rt::ie::Criticality::Reject)?,
             mbs_area_session_id: s_mbs_area_session_id,
             mbs_distribution_release_request_transfer: rt::ie::required(s_mbs_distribution_release_request_transfer, 300, rt::ie::Criticality::Reject)?,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             unknown_ies,
         })
     }
@@ -1393,8 +1300,8 @@ impl MulticastSessionActivationResponse {
 pub struct MulticastSessionActivationFailure {
     /// `id-MBS-SessionID` (id 299, Reject, Mandatory)
     pub mbs_session_id: MbsSessionId,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
     pub criticality_diagnostics: Option<CriticalityDiagnostics>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
@@ -1406,7 +1313,7 @@ impl MulticastSessionActivationFailure {
     pub fn new(mbs_session_id: MbsSessionId, cause: Cause) -> Self {
         Self {
             mbs_session_id,
-            cause,
+            cause: Some(cause),
             criticality_diagnostics: None,
             unknown_ies: Vec::new(),
         }
@@ -1421,8 +1328,7 @@ impl rt::AperEncode for MulticastSessionActivationFailure {
             let x = &self.mbs_session_id;
             ies.push(rt::ie::RawIe::new(299, rt::ie::Criticality::Reject, x)?);
         }
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.criticality_diagnostics {
@@ -1456,7 +1362,7 @@ impl rt::AperDecode for MulticastSessionActivationFailure {
         }
         Ok(Self {
             mbs_session_id: rt::ie::required(s_mbs_session_id, 299, rt::ie::Criticality::Reject)?,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             criticality_diagnostics: s_criticality_diagnostics,
             unknown_ies,
         })
@@ -1805,8 +1711,8 @@ pub struct MulticastSessionUpdateFailure {
     pub mbs_session_id: MbsSessionId,
     /// `id-MBS-AreaSessionID` (id 295, Reject, Optional)
     pub mbs_area_session_id: Option<MbsAreaSessionId>,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
     pub criticality_diagnostics: Option<CriticalityDiagnostics>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
@@ -1819,7 +1725,7 @@ impl MulticastSessionUpdateFailure {
         Self {
             mbs_session_id,
             mbs_area_session_id: None,
-            cause,
+            cause: Some(cause),
             criticality_diagnostics: None,
             unknown_ies: Vec::new(),
         }
@@ -1837,8 +1743,7 @@ impl rt::AperEncode for MulticastSessionUpdateFailure {
         if let Some(x) = &self.mbs_area_session_id {
             ies.push(rt::ie::RawIe::new(295, rt::ie::Criticality::Reject, x)?);
         }
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.criticality_diagnostics {
@@ -1875,7 +1780,7 @@ impl rt::AperDecode for MulticastSessionUpdateFailure {
         Ok(Self {
             mbs_session_id: rt::ie::required(s_mbs_session_id, 299, rt::ie::Criticality::Reject)?,
             mbs_area_session_id: s_mbs_area_session_id,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             criticality_diagnostics: s_criticality_diagnostics,
             unknown_ies,
         })
@@ -1896,12 +1801,12 @@ impl MulticastSessionUpdateFailure {
 /// ASN.1 `MulticastGroupPaging` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MulticastGroupPaging {
-    /// `id-MBS-SessionID` (id 299, Ignore, Mandatory)
-    pub mbs_session_id: MbsSessionId,
+    /// `id-MBS-SessionID` (id 299, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub mbs_session_id: Option<MbsSessionId>,
     /// `id-MBS-ServiceArea` (id 298, Ignore, Optional)
     pub mbs_service_area: Option<MbsServiceArea>,
-    /// `id-MulticastGroupPagingAreaList` (id 307, Ignore, Mandatory)
-    pub multicast_group_paging_area_list: MulticastGroupPagingAreaList,
+    /// `id-MulticastGroupPagingAreaList` (id 307, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub multicast_group_paging_area_list: Option<MulticastGroupPagingAreaList>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
     pub unknown_ies: Vec<rt::ie::RawIe>,
 }
@@ -1910,9 +1815,9 @@ impl MulticastGroupPaging {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(mbs_session_id: MbsSessionId, multicast_group_paging_area_list: MulticastGroupPagingAreaList) -> Self {
         Self {
-            mbs_session_id,
+            mbs_session_id: Some(mbs_session_id),
             mbs_service_area: None,
-            multicast_group_paging_area_list,
+            multicast_group_paging_area_list: Some(multicast_group_paging_area_list),
             unknown_ies: Vec::new(),
         }
     }
@@ -1922,15 +1827,13 @@ impl rt::AperEncode for MulticastGroupPaging {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.mbs_session_id;
+        if let Some(x) = &self.mbs_session_id {
             ies.push(rt::ie::RawIe::new(299, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.mbs_service_area {
             ies.push(rt::ie::RawIe::new(298, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.multicast_group_paging_area_list;
+        if let Some(x) = &self.multicast_group_paging_area_list {
             ies.push(rt::ie::RawIe::new(307, rt::ie::Criticality::Ignore, x)?);
         }
         ies.extend(self.unknown_ies.iter().cloned());
@@ -1960,9 +1863,9 @@ impl rt::AperDecode for MulticastGroupPaging {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            mbs_session_id: rt::ie::required(s_mbs_session_id, 299, rt::ie::Criticality::Ignore)?,
+            mbs_session_id: rt::ie::tolerate_missing(s_mbs_session_id, 299, rt::ie::Criticality::Ignore),
             mbs_service_area: s_mbs_service_area,
-            multicast_group_paging_area_list: rt::ie::required(s_multicast_group_paging_area_list, 307, rt::ie::Criticality::Ignore)?,
+            multicast_group_paging_area_list: rt::ie::tolerate_missing(s_multicast_group_paging_area_list, 307, rt::ie::Criticality::Ignore),
             unknown_ies,
         })
     }
@@ -2059,8 +1962,8 @@ impl TimingSynchronisationStatusRequest {
 /// ASN.1 `TimingSynchronisationStatusResponse` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TimingSynchronisationStatusResponse {
-    /// `id-RoutingID` (id 89, Ignore, Mandatory)
-    pub routing_id: RoutingId,
+    /// `id-RoutingID` (id 89, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub routing_id: Option<RoutingId>,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
     pub criticality_diagnostics: Option<CriticalityDiagnostics>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
@@ -2071,7 +1974,7 @@ impl TimingSynchronisationStatusResponse {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(routing_id: RoutingId) -> Self {
         Self {
-            routing_id,
+            routing_id: Some(routing_id),
             criticality_diagnostics: None,
             unknown_ies: Vec::new(),
         }
@@ -2082,8 +1985,7 @@ impl rt::AperEncode for TimingSynchronisationStatusResponse {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.routing_id;
+        if let Some(x) = &self.routing_id {
             ies.push(rt::ie::RawIe::new(89, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.criticality_diagnostics {
@@ -2114,7 +2016,7 @@ impl rt::AperDecode for TimingSynchronisationStatusResponse {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            routing_id: rt::ie::required(s_routing_id, 89, rt::ie::Criticality::Ignore)?,
+            routing_id: rt::ie::tolerate_missing(s_routing_id, 89, rt::ie::Criticality::Ignore),
             criticality_diagnostics: s_criticality_diagnostics,
             unknown_ies,
         })
@@ -2135,10 +2037,10 @@ impl TimingSynchronisationStatusResponse {
 /// ASN.1 `TimingSynchronisationStatusFailure` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TimingSynchronisationStatusFailure {
-    /// `id-RoutingID` (id 89, Ignore, Mandatory)
-    pub routing_id: RoutingId,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-RoutingID` (id 89, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub routing_id: Option<RoutingId>,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
     pub criticality_diagnostics: Option<CriticalityDiagnostics>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
@@ -2149,8 +2051,8 @@ impl TimingSynchronisationStatusFailure {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(routing_id: RoutingId, cause: Cause) -> Self {
         Self {
-            routing_id,
-            cause,
+            routing_id: Some(routing_id),
+            cause: Some(cause),
             criticality_diagnostics: None,
             unknown_ies: Vec::new(),
         }
@@ -2161,12 +2063,10 @@ impl rt::AperEncode for TimingSynchronisationStatusFailure {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.routing_id;
+        if let Some(x) = &self.routing_id {
             ies.push(rt::ie::RawIe::new(89, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.criticality_diagnostics {
@@ -2199,8 +2099,8 @@ impl rt::AperDecode for TimingSynchronisationStatusFailure {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            routing_id: rt::ie::required(s_routing_id, 89, rt::ie::Criticality::Ignore)?,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            routing_id: rt::ie::tolerate_missing(s_routing_id, 89, rt::ie::Criticality::Ignore),
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             criticality_diagnostics: s_criticality_diagnostics,
             unknown_ies,
         })
@@ -2221,12 +2121,12 @@ impl TimingSynchronisationStatusFailure {
 /// ASN.1 `TimingSynchronisationStatusReport` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TimingSynchronisationStatusReport {
-    /// `id-RoutingID` (id 89, Ignore, Mandatory)
-    pub routing_id: RoutingId,
-    /// `id-RANTimingSynchronisationStatusInfo` (id 387, Ignore, Mandatory)
-    pub ran_timing_synchronisation_status_info: RanTimingSynchronisationStatusInfo,
-    /// `id-RAN-TSSScope` (id 389, Ignore, Mandatory)
-    pub ran_tss_scope: RanTssScope,
+    /// `id-RoutingID` (id 89, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub routing_id: Option<RoutingId>,
+    /// `id-RANTimingSynchronisationStatusInfo` (id 387, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub ran_timing_synchronisation_status_info: Option<RanTimingSynchronisationStatusInfo>,
+    /// `id-RAN-TSSScope` (id 389, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub ran_tss_scope: Option<RanTssScope>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
     pub unknown_ies: Vec<rt::ie::RawIe>,
 }
@@ -2235,9 +2135,9 @@ impl TimingSynchronisationStatusReport {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(routing_id: RoutingId, ran_timing_synchronisation_status_info: RanTimingSynchronisationStatusInfo, ran_tss_scope: RanTssScope) -> Self {
         Self {
-            routing_id,
-            ran_timing_synchronisation_status_info,
-            ran_tss_scope,
+            routing_id: Some(routing_id),
+            ran_timing_synchronisation_status_info: Some(ran_timing_synchronisation_status_info),
+            ran_tss_scope: Some(ran_tss_scope),
             unknown_ies: Vec::new(),
         }
     }
@@ -2247,16 +2147,13 @@ impl rt::AperEncode for TimingSynchronisationStatusReport {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.routing_id;
+        if let Some(x) = &self.routing_id {
             ies.push(rt::ie::RawIe::new(89, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.ran_timing_synchronisation_status_info;
+        if let Some(x) = &self.ran_timing_synchronisation_status_info {
             ies.push(rt::ie::RawIe::new(387, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.ran_tss_scope;
+        if let Some(x) = &self.ran_tss_scope {
             ies.push(rt::ie::RawIe::new(389, rt::ie::Criticality::Ignore, x)?);
         }
         ies.extend(self.unknown_ies.iter().cloned());
@@ -2286,9 +2183,9 @@ impl rt::AperDecode for TimingSynchronisationStatusReport {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            routing_id: rt::ie::required(s_routing_id, 89, rt::ie::Criticality::Ignore)?,
-            ran_timing_synchronisation_status_info: rt::ie::required(s_ran_timing_synchronisation_status_info, 387, rt::ie::Criticality::Ignore)?,
-            ran_tss_scope: rt::ie::required(s_ran_tss_scope, 389, rt::ie::Criticality::Ignore)?,
+            routing_id: rt::ie::tolerate_missing(s_routing_id, 89, rt::ie::Criticality::Ignore),
+            ran_timing_synchronisation_status_info: rt::ie::tolerate_missing(s_ran_timing_synchronisation_status_info, 387, rt::ie::Criticality::Ignore),
+            ran_tss_scope: rt::ie::tolerate_missing(s_ran_tss_scope, 389, rt::ie::Criticality::Ignore),
             unknown_ies,
         })
     }
@@ -2481,6 +2378,101 @@ impl MtCommunicationHandlingResponse {
     /// The ids of the IEs this version of the specification defines for the message, in the order the
     /// specification requires them on the wire.
     pub const IE_IDS: &'static [u32] = &[10, 85, 19];
+
+    /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
+    pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {
+        rt::ie::wire_ie_ids(content, true, rt::Size::range(0, 65535))
+    }
+}
+
+/// ASN.1 `MTCommunicationHandlingFailure` (NGAP-PDU-Contents): the IEs of the message are the fields.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MtCommunicationHandlingFailure {
+    /// `id-AMF-UE-NGAP-ID` (id 10, Reject, Mandatory)
+    pub amf_ue_ngap_id: AmfUeNgapId,
+    /// `id-RAN-UE-NGAP-ID` (id 85, Reject, Mandatory)
+    pub ran_ue_ngap_id: RanUeNgapId,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
+    /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
+    pub criticality_diagnostics: Option<CriticalityDiagnostics>,
+    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
+    pub unknown_ies: Vec<rt::ie::RawIe>,
+}
+
+impl MtCommunicationHandlingFailure {
+    /// A value with the mandatory IEs given and every optional one absent.
+    pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId, cause: Cause) -> Self {
+        Self {
+            amf_ue_ngap_id,
+            ran_ue_ngap_id,
+            cause: Some(cause),
+            criticality_diagnostics: None,
+            unknown_ies: Vec::new(),
+        }
+    }
+}
+
+impl rt::AperEncode for MtCommunicationHandlingFailure {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        w.write_bit(false); // extension marker: no additions
+        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
+        {
+            let x = &self.amf_ue_ngap_id;
+            ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Reject, x)?);
+        }
+        {
+            let x = &self.ran_ue_ngap_id;
+            ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Reject, x)?);
+        }
+        if let Some(x) = &self.cause {
+            ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
+        }
+        if let Some(x) = &self.criticality_diagnostics {
+            ies.push(rt::ie::RawIe::new(19, rt::ie::Criticality::Ignore, x)?);
+        }
+        ies.extend(self.unknown_ies.iter().cloned());
+        rt::ie::write_container(w, rt::Size::range(0, 65535), &ies)
+    }
+}
+
+impl rt::AperDecode for MtCommunicationHandlingFailure {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let extension = r.read_bit()?;
+        let mut s_amf_ue_ngap_id: Option<AmfUeNgapId> = None;
+        let mut s_ran_ue_ngap_id: Option<RanUeNgapId> = None;
+        let mut s_cause: Option<Cause> = None;
+        let mut s_criticality_diagnostics: Option<CriticalityDiagnostics> = None;
+        let mut unknown_ies = Vec::new();
+        for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
+            match ie.id {
+                10 => rt::ie::set_once(&mut s_amf_ue_ngap_id, 10, ie.decode()?)?,
+                85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
+                15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
+                19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
+            }
+        }
+        if extension {
+            r.read_extension_additions()?;
+        }
+        Ok(Self {
+            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Reject)?,
+            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Reject)?,
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
+            criticality_diagnostics: s_criticality_diagnostics,
+            unknown_ies,
+        })
+    }
+}
+
+impl MtCommunicationHandlingFailure {
+    /// The ids of the IEs this version of the specification defines for the message, in the order the
+    /// specification requires them on the wire.
+    pub const IE_IDS: &'static [u32] = &[10, 85, 15, 19];
 
     /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
     pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {

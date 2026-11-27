@@ -45,10 +45,12 @@ Generated types derive `Debug, Clone, PartialEq, Eq` (+ `Copy`, `Hash` on intege
 A message (`NGSetupRequest ::= SEQUENCE { protocolIEs ProtocolIE-Container {{NGSetupRequestIEs}}, ... }`) is a struct whose
 **fields are the IEs**, in the order of the object set (the order they must be written in):
 
-* `mandatory` → `T`, `optional` / `conditional` → `Option<T>`;
+* `mandatory` → `T`, `optional` / `conditional` → `Option<T>`; **a `mandatory` IE whose criticality is not `reject` is also an `Option<T>`** (clause 10.3.5: its absence
+  is tolerated, so the decoder keeps `None`; the encoder writes nothing for `None`, so decode → encode reproduces what was received). 125 of the 350
+  mandatory IEs of Rel-19 are such `ignore` ones, among them both UE NGAP IDs of most messages;
 * `unknown_ies: Vec<RawIe>`: IEs whose id the set does not list, kept as `{ id, criticality, content }` so nothing is lost
   and the receiver can apply the criticality rules of clause 10.3.4;
-* `new(<mandatory IEs>)`; the same shape serves the N2 transfer containers (`PDUSessionResourceSetupRequestTransfer`, …).
+* `new(<mandatory IEs>)` takes the plain values (also for the tolerated ones, which it wraps in `Some`); the same shape serves the N2 transfer containers (`PDUSessionResourceSetupRequestTransfer`, …).
 
 The wire layout (count, then per IE: id 0..65535, criticality, open type) comes from the runtime (`ngap_aper::ie`), which
 follows `NGAP-Containers`; the IR derives that layout from the spec's own templates.
@@ -72,7 +74,8 @@ message (variant = message type name). The procedure code and criticality on the
 | IE order differs from the spec | accepted (the encoder always writes spec order) |
 | IE id not in the set | kept in `unknown_ies` (any criticality) |
 | IE appears twice | `ErrorKind::DuplicateIe { id }` |
-| mandatory IE missing | `ErrorKind::MissingIe { id, criticality }` — an error whatever the criticality, because the struct cannot hold it |
+| mandatory IE with criticality `reject` missing | `ErrorKind::MissingIe { id, criticality }` |
+| mandatory IE with criticality `ignore` / `notify` missing | the field is `None` (`notify`: also noted for the facade, `ngap_aper::ie::record_findings`) |
 | procedure code unknown | `ErrorKind::UnknownProcedure { code, criticality }` |
 | CHOICE / ENUMERATED extension value undefined here | `ErrorKind::InvalidIndex` |
 | SEQUENCE extension additions present | skipped (NGAP-j40 defines none) |

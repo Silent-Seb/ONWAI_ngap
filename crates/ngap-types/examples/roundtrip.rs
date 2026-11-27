@@ -34,9 +34,9 @@ fn main() -> ngap_aper::Result<()> {
     match from_slice::<NgapPdu>(&bytes)? {
         NgapPdu::SuccessfulOutcome(SuccessfulOutcome::NgSetupResponse(r)) => {
             println!(
-                "AMF name {:?}, capacity {}, {} GUAMI(s)",
+                "AMF name {:?}, capacity {:?}, {} GUAMI(s)",
                 r.amf_name.0,
-                r.relative_amf_capacity.0,
+                r.relative_amf_capacity.map(|c| c.0),
                 r.served_guami_list.0.len()
             );
             println!("IEs this version does not know: {}", r.unknown_ies.len());

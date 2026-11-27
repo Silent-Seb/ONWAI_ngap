@@ -5,126 +5,13 @@ use ngap_aper as rt;
 use rt::{AperDecode as _, AperEncode as _};
 use crate::*;
 
-/// ASN.1 `UEContextSuspendRequest` (NGAP-PDU-Contents): the IEs of the message are the fields.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UeContextSuspendRequest {
-    /// `id-AMF-UE-NGAP-ID` (id 10, Reject, Mandatory)
-    pub amf_ue_ngap_id: AmfUeNgapId,
-    /// `id-RAN-UE-NGAP-ID` (id 85, Reject, Mandatory)
-    pub ran_ue_ngap_id: RanUeNgapId,
-    /// `id-InfoOnRecommendedCellsAndRANNodesForPaging` (id 32, Ignore, Optional)
-    pub info_on_recommended_cells_and_ran_nodes_for_paging: Option<InfoOnRecommendedCellsAndRanNodesForPaging>,
-    /// `id-PagingAssisDataforCEcapabUE` (id 207, Ignore, Optional)
-    pub paging_assis_datafor_c_ecapab_ue: Option<PagingAssisDataforCEcapabUe>,
-    /// `id-PDUSessionResourceSuspendListSUSReq` (id 231, Reject, Optional)
-    pub pdu_session_resource_suspend_list_sus_req: Option<PduSessionResourceSuspendListSusReq>,
-    /// `id-UserLocationInformation` (id 121, Ignore, Optional)
-    pub user_location_information: Option<UserLocationInformation>,
-    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
-    pub unknown_ies: Vec<rt::ie::RawIe>,
-}
-
-impl UeContextSuspendRequest {
-    /// A value with the mandatory IEs given and every optional one absent.
-    pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId) -> Self {
-        Self {
-            amf_ue_ngap_id,
-            ran_ue_ngap_id,
-            info_on_recommended_cells_and_ran_nodes_for_paging: None,
-            paging_assis_datafor_c_ecapab_ue: None,
-            pdu_session_resource_suspend_list_sus_req: None,
-            user_location_information: None,
-            unknown_ies: Vec::new(),
-        }
-    }
-}
-
-impl rt::AperEncode for UeContextSuspendRequest {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        w.write_bit(false); // extension marker: no additions
-        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.amf_ue_ngap_id;
-            ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Reject, x)?);
-        }
-        {
-            let x = &self.ran_ue_ngap_id;
-            ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Reject, x)?);
-        }
-        if let Some(x) = &self.info_on_recommended_cells_and_ran_nodes_for_paging {
-            ies.push(rt::ie::RawIe::new(32, rt::ie::Criticality::Ignore, x)?);
-        }
-        if let Some(x) = &self.paging_assis_datafor_c_ecapab_ue {
-            ies.push(rt::ie::RawIe::new(207, rt::ie::Criticality::Ignore, x)?);
-        }
-        if let Some(x) = &self.pdu_session_resource_suspend_list_sus_req {
-            ies.push(rt::ie::RawIe::new(231, rt::ie::Criticality::Reject, x)?);
-        }
-        if let Some(x) = &self.user_location_information {
-            ies.push(rt::ie::RawIe::new(121, rt::ie::Criticality::Ignore, x)?);
-        }
-        ies.extend(self.unknown_ies.iter().cloned());
-        rt::ie::write_container(w, rt::Size::range(0, 65535), &ies)
-    }
-}
-
-impl rt::AperDecode for UeContextSuspendRequest {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let extension = r.read_bit()?;
-        let mut s_amf_ue_ngap_id: Option<AmfUeNgapId> = None;
-        let mut s_ran_ue_ngap_id: Option<RanUeNgapId> = None;
-        let mut s_info_on_recommended_cells_and_ran_nodes_for_paging: Option<InfoOnRecommendedCellsAndRanNodesForPaging> = None;
-        let mut s_paging_assis_datafor_c_ecapab_ue: Option<PagingAssisDataforCEcapabUe> = None;
-        let mut s_pdu_session_resource_suspend_list_sus_req: Option<PduSessionResourceSuspendListSusReq> = None;
-        let mut s_user_location_information: Option<UserLocationInformation> = None;
-        let mut unknown_ies = Vec::new();
-        for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
-            match ie.id {
-                10 => rt::ie::set_once(&mut s_amf_ue_ngap_id, 10, ie.decode()?)?,
-                85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
-                32 => rt::ie::set_once(&mut s_info_on_recommended_cells_and_ran_nodes_for_paging, 32, ie.decode()?)?,
-                207 => rt::ie::set_once(&mut s_paging_assis_datafor_c_ecapab_ue, 207, ie.decode()?)?,
-                231 => rt::ie::set_once(&mut s_pdu_session_resource_suspend_list_sus_req, 231, ie.decode()?)?,
-                121 => rt::ie::set_once(&mut s_user_location_information, 121, ie.decode()?)?,
-                _ => {
-                    rt::ie::note_unknown(&ie);
-                    unknown_ies.push(ie)
-                }
-            }
-        }
-        if extension {
-            r.read_extension_additions()?;
-        }
-        Ok(Self {
-            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Reject)?,
-            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Reject)?,
-            info_on_recommended_cells_and_ran_nodes_for_paging: s_info_on_recommended_cells_and_ran_nodes_for_paging,
-            paging_assis_datafor_c_ecapab_ue: s_paging_assis_datafor_c_ecapab_ue,
-            pdu_session_resource_suspend_list_sus_req: s_pdu_session_resource_suspend_list_sus_req,
-            user_location_information: s_user_location_information,
-            unknown_ies,
-        })
-    }
-}
-
-impl UeContextSuspendRequest {
-    /// The ids of the IEs this version of the specification defines for the message, in the order the
-    /// specification requires them on the wire.
-    pub const IE_IDS: &'static [u32] = &[10, 85, 32, 207, 231, 121];
-
-    /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
-    pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {
-        rt::ie::wire_ie_ids(content, true, rt::Size::range(0, 65535))
-    }
-}
-
 /// ASN.1 `UEContextSuspendResponse` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UeContextSuspendResponse {
-    /// `id-AMF-UE-NGAP-ID` (id 10, Ignore, Mandatory)
-    pub amf_ue_ngap_id: AmfUeNgapId,
-    /// `id-RAN-UE-NGAP-ID` (id 85, Ignore, Mandatory)
-    pub ran_ue_ngap_id: RanUeNgapId,
+    /// `id-AMF-UE-NGAP-ID` (id 10, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub amf_ue_ngap_id: Option<AmfUeNgapId>,
+    /// `id-RAN-UE-NGAP-ID` (id 85, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub ran_ue_ngap_id: Option<RanUeNgapId>,
     /// `id-SecurityContext` (id 93, Reject, Optional)
     pub security_context: Option<SecurityContext>,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
@@ -137,8 +24,8 @@ impl UeContextSuspendResponse {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId) -> Self {
         Self {
-            amf_ue_ngap_id,
-            ran_ue_ngap_id,
+            amf_ue_ngap_id: Some(amf_ue_ngap_id),
+            ran_ue_ngap_id: Some(ran_ue_ngap_id),
             security_context: None,
             criticality_diagnostics: None,
             unknown_ies: Vec::new(),
@@ -150,12 +37,10 @@ impl rt::AperEncode for UeContextSuspendResponse {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.amf_ue_ngap_id;
+        if let Some(x) = &self.amf_ue_ngap_id {
             ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.ran_ue_ngap_id;
+        if let Some(x) = &self.ran_ue_ngap_id {
             ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.security_context {
@@ -193,8 +78,8 @@ impl rt::AperDecode for UeContextSuspendResponse {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Ignore)?,
-            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Ignore)?,
+            amf_ue_ngap_id: rt::ie::tolerate_missing(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Ignore),
+            ran_ue_ngap_id: rt::ie::tolerate_missing(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Ignore),
             security_context: s_security_context,
             criticality_diagnostics: s_criticality_diagnostics,
             unknown_ies,
@@ -216,12 +101,12 @@ impl UeContextSuspendResponse {
 /// ASN.1 `UEContextSuspendFailure` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UeContextSuspendFailure {
-    /// `id-AMF-UE-NGAP-ID` (id 10, Ignore, Mandatory)
-    pub amf_ue_ngap_id: AmfUeNgapId,
-    /// `id-RAN-UE-NGAP-ID` (id 85, Ignore, Mandatory)
-    pub ran_ue_ngap_id: RanUeNgapId,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-AMF-UE-NGAP-ID` (id 10, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub amf_ue_ngap_id: Option<AmfUeNgapId>,
+    /// `id-RAN-UE-NGAP-ID` (id 85, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub ran_ue_ngap_id: Option<RanUeNgapId>,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
     pub criticality_diagnostics: Option<CriticalityDiagnostics>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
@@ -232,9 +117,9 @@ impl UeContextSuspendFailure {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId, cause: Cause) -> Self {
         Self {
-            amf_ue_ngap_id,
-            ran_ue_ngap_id,
-            cause,
+            amf_ue_ngap_id: Some(amf_ue_ngap_id),
+            ran_ue_ngap_id: Some(ran_ue_ngap_id),
+            cause: Some(cause),
             criticality_diagnostics: None,
             unknown_ies: Vec::new(),
         }
@@ -245,16 +130,13 @@ impl rt::AperEncode for UeContextSuspendFailure {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.amf_ue_ngap_id;
+        if let Some(x) = &self.amf_ue_ngap_id {
             ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.ran_ue_ngap_id;
+        if let Some(x) = &self.ran_ue_ngap_id {
             ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.criticality_diagnostics {
@@ -289,9 +171,9 @@ impl rt::AperDecode for UeContextSuspendFailure {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Ignore)?,
-            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Ignore)?,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            amf_ue_ngap_id: rt::ie::tolerate_missing(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Ignore),
+            ran_ue_ngap_id: rt::ie::tolerate_missing(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Ignore),
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             criticality_diagnostics: s_criticality_diagnostics,
             unknown_ies,
         })
@@ -722,10 +604,10 @@ impl UeContextModificationRequest {
 /// ASN.1 `UEContextModificationResponse` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UeContextModificationResponse {
-    /// `id-AMF-UE-NGAP-ID` (id 10, Ignore, Mandatory)
-    pub amf_ue_ngap_id: AmfUeNgapId,
-    /// `id-RAN-UE-NGAP-ID` (id 85, Ignore, Mandatory)
-    pub ran_ue_ngap_id: RanUeNgapId,
+    /// `id-AMF-UE-NGAP-ID` (id 10, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub amf_ue_ngap_id: Option<AmfUeNgapId>,
+    /// `id-RAN-UE-NGAP-ID` (id 85, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub ran_ue_ngap_id: Option<RanUeNgapId>,
     /// `id-RRCState` (id 92, Ignore, Optional)
     pub rrc_state: Option<RrcState>,
     /// `id-UserLocationInformation` (id 121, Ignore, Optional)
@@ -740,8 +622,8 @@ impl UeContextModificationResponse {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId) -> Self {
         Self {
-            amf_ue_ngap_id,
-            ran_ue_ngap_id,
+            amf_ue_ngap_id: Some(amf_ue_ngap_id),
+            ran_ue_ngap_id: Some(ran_ue_ngap_id),
             rrc_state: None,
             user_location_information: None,
             criticality_diagnostics: None,
@@ -754,12 +636,10 @@ impl rt::AperEncode for UeContextModificationResponse {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.amf_ue_ngap_id;
+        if let Some(x) = &self.amf_ue_ngap_id {
             ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.ran_ue_ngap_id;
+        if let Some(x) = &self.ran_ue_ngap_id {
             ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.rrc_state {
@@ -802,8 +682,8 @@ impl rt::AperDecode for UeContextModificationResponse {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Ignore)?,
-            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Ignore)?,
+            amf_ue_ngap_id: rt::ie::tolerate_missing(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Ignore),
+            ran_ue_ngap_id: rt::ie::tolerate_missing(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Ignore),
             rrc_state: s_rrc_state,
             user_location_information: s_user_location_information,
             criticality_diagnostics: s_criticality_diagnostics,
@@ -826,12 +706,12 @@ impl UeContextModificationResponse {
 /// ASN.1 `UEContextModificationFailure` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UeContextModificationFailure {
-    /// `id-AMF-UE-NGAP-ID` (id 10, Ignore, Mandatory)
-    pub amf_ue_ngap_id: AmfUeNgapId,
-    /// `id-RAN-UE-NGAP-ID` (id 85, Ignore, Mandatory)
-    pub ran_ue_ngap_id: RanUeNgapId,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-AMF-UE-NGAP-ID` (id 10, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub amf_ue_ngap_id: Option<AmfUeNgapId>,
+    /// `id-RAN-UE-NGAP-ID` (id 85, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub ran_ue_ngap_id: Option<RanUeNgapId>,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
     pub criticality_diagnostics: Option<CriticalityDiagnostics>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
@@ -842,9 +722,9 @@ impl UeContextModificationFailure {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId, cause: Cause) -> Self {
         Self {
-            amf_ue_ngap_id,
-            ran_ue_ngap_id,
-            cause,
+            amf_ue_ngap_id: Some(amf_ue_ngap_id),
+            ran_ue_ngap_id: Some(ran_ue_ngap_id),
+            cause: Some(cause),
             criticality_diagnostics: None,
             unknown_ies: Vec::new(),
         }
@@ -855,16 +735,13 @@ impl rt::AperEncode for UeContextModificationFailure {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.amf_ue_ngap_id;
+        if let Some(x) = &self.amf_ue_ngap_id {
             ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.ran_ue_ngap_id;
+        if let Some(x) = &self.ran_ue_ngap_id {
             ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.criticality_diagnostics {
@@ -899,9 +776,9 @@ impl rt::AperDecode for UeContextModificationFailure {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Ignore)?,
-            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Ignore)?,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            amf_ue_ngap_id: rt::ie::tolerate_missing(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Ignore),
+            ran_ue_ngap_id: rt::ie::tolerate_missing(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Ignore),
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             criticality_diagnostics: s_criticality_diagnostics,
             unknown_ies,
         })
@@ -926,10 +803,10 @@ pub struct RrcInactiveTransitionReport {
     pub amf_ue_ngap_id: AmfUeNgapId,
     /// `id-RAN-UE-NGAP-ID` (id 85, Reject, Mandatory)
     pub ran_ue_ngap_id: RanUeNgapId,
-    /// `id-RRCState` (id 92, Ignore, Mandatory)
-    pub rrc_state: RrcState,
-    /// `id-UserLocationInformation` (id 121, Ignore, Mandatory)
-    pub user_location_information: UserLocationInformation,
+    /// `id-RRCState` (id 92, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub rrc_state: Option<RrcState>,
+    /// `id-UserLocationInformation` (id 121, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub user_location_information: Option<UserLocationInformation>,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
     pub unknown_ies: Vec<rt::ie::RawIe>,
 }
@@ -940,8 +817,8 @@ impl RrcInactiveTransitionReport {
         Self {
             amf_ue_ngap_id,
             ran_ue_ngap_id,
-            rrc_state,
-            user_location_information,
+            rrc_state: Some(rrc_state),
+            user_location_information: Some(user_location_information),
             unknown_ies: Vec::new(),
         }
     }
@@ -959,12 +836,10 @@ impl rt::AperEncode for RrcInactiveTransitionReport {
             let x = &self.ran_ue_ngap_id;
             ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Reject, x)?);
         }
-        {
-            let x = &self.rrc_state;
+        if let Some(x) = &self.rrc_state {
             ies.push(rt::ie::RawIe::new(92, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.user_location_information;
+        if let Some(x) = &self.user_location_information {
             ies.push(rt::ie::RawIe::new(121, rt::ie::Criticality::Ignore, x)?);
         }
         ies.extend(self.unknown_ies.iter().cloned());
@@ -998,8 +873,8 @@ impl rt::AperDecode for RrcInactiveTransitionReport {
         Ok(Self {
             amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Reject)?,
             ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Reject)?,
-            rrc_state: rt::ie::required(s_rrc_state, 92, rt::ie::Criticality::Ignore)?,
-            user_location_information: rt::ie::required(s_user_location_information, 121, rt::ie::Criticality::Ignore)?,
+            rrc_state: rt::ie::tolerate_missing(s_rrc_state, 92, rt::ie::Criticality::Ignore),
+            user_location_information: rt::ie::tolerate_missing(s_user_location_information, 121, rt::ie::Criticality::Ignore),
             unknown_ies,
         })
     }
@@ -1220,10 +1095,10 @@ pub struct RancpRelocationIndication {
     pub ran_ue_ngap_id: RanUeNgapId,
     /// `id-FiveG-S-TMSI` (id 26, Reject, Mandatory)
     pub five_g_s_tmsi: FiveGSTmsi,
-    /// `id-EUTRA-CGI` (id 25, Ignore, Mandatory)
-    pub eutra_cgi: EutraCgi,
-    /// `id-TAI` (id 213, Ignore, Mandatory)
-    pub tai: Tai,
+    /// `id-EUTRA-CGI` (id 25, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub eutra_cgi: Option<EutraCgi>,
+    /// `id-TAI` (id 213, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub tai: Option<Tai>,
     /// `id-UL-CP-SecurityInformation` (id 211, Reject, Mandatory)
     pub ul_cp_security_information: UlCpSecurityInformation,
     /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
@@ -1236,8 +1111,8 @@ impl RancpRelocationIndication {
         Self {
             ran_ue_ngap_id,
             five_g_s_tmsi,
-            eutra_cgi,
-            tai,
+            eutra_cgi: Some(eutra_cgi),
+            tai: Some(tai),
             ul_cp_security_information,
             unknown_ies: Vec::new(),
         }
@@ -1256,12 +1131,10 @@ impl rt::AperEncode for RancpRelocationIndication {
             let x = &self.five_g_s_tmsi;
             ies.push(rt::ie::RawIe::new(26, rt::ie::Criticality::Reject, x)?);
         }
-        {
-            let x = &self.eutra_cgi;
+        if let Some(x) = &self.eutra_cgi {
             ies.push(rt::ie::RawIe::new(25, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.tai;
+        if let Some(x) = &self.tai {
             ies.push(rt::ie::RawIe::new(213, rt::ie::Criticality::Ignore, x)?);
         }
         {
@@ -1301,8 +1174,8 @@ impl rt::AperDecode for RancpRelocationIndication {
         Ok(Self {
             ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Reject)?,
             five_g_s_tmsi: rt::ie::required(s_five_g_s_tmsi, 26, rt::ie::Criticality::Reject)?,
-            eutra_cgi: rt::ie::required(s_eutra_cgi, 25, rt::ie::Criticality::Ignore)?,
-            tai: rt::ie::required(s_tai, 213, rt::ie::Criticality::Ignore)?,
+            eutra_cgi: rt::ie::tolerate_missing(s_eutra_cgi, 25, rt::ie::Criticality::Ignore),
+            tai: rt::ie::tolerate_missing(s_tai, 213, rt::ie::Criticality::Ignore),
             ul_cp_security_information: rt::ie::required(s_ul_cp_security_information, 211, rt::ie::Criticality::Reject)?,
             unknown_ies,
         })
@@ -1329,8 +1202,8 @@ pub struct HandoverRequired {
     pub ran_ue_ngap_id: RanUeNgapId,
     /// `id-HandoverType` (id 29, Reject, Mandatory)
     pub handover_type: HandoverType,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// `id-TargetID` (id 105, Reject, Mandatory)
     pub target_id: TargetId,
     /// `id-DirectForwardingPathAvailability` (id 22, Ignore, Optional)
@@ -1350,7 +1223,7 @@ impl HandoverRequired {
             amf_ue_ngap_id,
             ran_ue_ngap_id,
             handover_type,
-            cause,
+            cause: Some(cause),
             target_id,
             direct_forwarding_path_availability: None,
             pdu_session_resource_list_ho_rqd,
@@ -1376,8 +1249,7 @@ impl rt::AperEncode for HandoverRequired {
             let x = &self.handover_type;
             ies.push(rt::ie::RawIe::new(29, rt::ie::Criticality::Reject, x)?);
         }
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         {
@@ -1435,7 +1307,7 @@ impl rt::AperDecode for HandoverRequired {
             amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Reject)?,
             ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Reject)?,
             handover_type: rt::ie::required(s_handover_type, 29, rt::ie::Criticality::Reject)?,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             target_id: rt::ie::required(s_target_id, 105, rt::ie::Criticality::Reject)?,
             direct_forwarding_path_availability: s_direct_forwarding_path_availability,
             pdu_session_resource_list_ho_rqd: rt::ie::required(s_pdu_session_resource_list_ho_rqd, 61, rt::ie::Criticality::Reject)?,
@@ -1592,12 +1464,12 @@ impl HandoverCommand {
 /// ASN.1 `HandoverPreparationFailure` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HandoverPreparationFailure {
-    /// `id-AMF-UE-NGAP-ID` (id 10, Ignore, Mandatory)
-    pub amf_ue_ngap_id: AmfUeNgapId,
-    /// `id-RAN-UE-NGAP-ID` (id 85, Ignore, Mandatory)
-    pub ran_ue_ngap_id: RanUeNgapId,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-AMF-UE-NGAP-ID` (id 10, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub amf_ue_ngap_id: Option<AmfUeNgapId>,
+    /// `id-RAN-UE-NGAP-ID` (id 85, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub ran_ue_ngap_id: Option<RanUeNgapId>,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
     pub criticality_diagnostics: Option<CriticalityDiagnostics>,
     /// `id-TargettoSource-Failure-TransparentContainer` (id 262, Ignore, Optional)
@@ -1610,9 +1482,9 @@ impl HandoverPreparationFailure {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId, cause: Cause) -> Self {
         Self {
-            amf_ue_ngap_id,
-            ran_ue_ngap_id,
-            cause,
+            amf_ue_ngap_id: Some(amf_ue_ngap_id),
+            ran_ue_ngap_id: Some(ran_ue_ngap_id),
+            cause: Some(cause),
             criticality_diagnostics: None,
             targetto_source_failure_transparent_container: None,
             unknown_ies: Vec::new(),
@@ -1624,16 +1496,13 @@ impl rt::AperEncode for HandoverPreparationFailure {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.amf_ue_ngap_id;
+        if let Some(x) = &self.amf_ue_ngap_id {
             ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.ran_ue_ngap_id;
+        if let Some(x) = &self.ran_ue_ngap_id {
             ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.criticality_diagnostics {
@@ -1673,9 +1542,9 @@ impl rt::AperDecode for HandoverPreparationFailure {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Ignore)?,
-            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Ignore)?,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            amf_ue_ngap_id: rt::ie::tolerate_missing(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Ignore),
+            ran_ue_ngap_id: rt::ie::tolerate_missing(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Ignore),
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             criticality_diagnostics: s_criticality_diagnostics,
             targetto_source_failure_transparent_container: s_targetto_source_failure_transparent_container,
             unknown_ies,
@@ -1701,8 +1570,8 @@ pub struct HandoverRequest {
     pub amf_ue_ngap_id: AmfUeNgapId,
     /// `id-HandoverType` (id 29, Reject, Mandatory)
     pub handover_type: HandoverType,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// `id-UEAggregateMaximumBitRate` (id 110, Reject, Mandatory)
     pub ue_aggregate_maximum_bit_rate: UeAggregateMaximumBitRate,
     /// `id-CoreNetworkAssistanceInformationForInactive` (id 18, Ignore, Optional)
@@ -1809,7 +1678,7 @@ impl HandoverRequest {
         Self {
             amf_ue_ngap_id,
             handover_type,
-            cause,
+            cause: Some(cause),
             ue_aggregate_maximum_bit_rate,
             core_network_assistance_information_for_inactive: None,
             ue_security_capabilities,
@@ -1875,8 +1744,7 @@ impl rt::AperEncode for HandoverRequest {
             let x = &self.handover_type;
             ies.push(rt::ie::RawIe::new(29, rt::ie::Criticality::Reject, x)?);
         }
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         {
@@ -2155,7 +2023,7 @@ impl rt::AperDecode for HandoverRequest {
         Ok(Self {
             amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Reject)?,
             handover_type: rt::ie::required(s_handover_type, 29, rt::ie::Criticality::Reject)?,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             ue_aggregate_maximum_bit_rate: rt::ie::required(s_ue_aggregate_maximum_bit_rate, 110, rt::ie::Criticality::Reject)?,
             core_network_assistance_information_for_inactive: s_core_network_assistance_information_for_inactive,
             ue_security_capabilities: rt::ie::required(s_ue_security_capabilities, 119, rt::ie::Criticality::Reject)?,
@@ -2223,12 +2091,12 @@ impl HandoverRequest {
 /// ASN.1 `HandoverRequestAcknowledge` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HandoverRequestAcknowledge {
-    /// `id-AMF-UE-NGAP-ID` (id 10, Ignore, Mandatory)
-    pub amf_ue_ngap_id: AmfUeNgapId,
-    /// `id-RAN-UE-NGAP-ID` (id 85, Ignore, Mandatory)
-    pub ran_ue_ngap_id: RanUeNgapId,
-    /// `id-PDUSessionResourceAdmittedList` (id 53, Ignore, Mandatory)
-    pub pdu_session_resource_admitted_list: PduSessionResourceAdmittedList,
+    /// `id-AMF-UE-NGAP-ID` (id 10, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub amf_ue_ngap_id: Option<AmfUeNgapId>,
+    /// `id-RAN-UE-NGAP-ID` (id 85, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub ran_ue_ngap_id: Option<RanUeNgapId>,
+    /// `id-PDUSessionResourceAdmittedList` (id 53, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub pdu_session_resource_admitted_list: Option<PduSessionResourceAdmittedList>,
     /// `id-PDUSessionResourceFailedToSetupListHOAck` (id 56, Ignore, Optional)
     pub pdu_session_resource_failed_to_setup_list_ho_ack: Option<PduSessionResourceFailedToSetupListHoAck>,
     /// `id-TargetToSource-TransparentContainer` (id 106, Reject, Mandatory)
@@ -2249,9 +2117,9 @@ impl HandoverRequestAcknowledge {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId, pdu_session_resource_admitted_list: PduSessionResourceAdmittedList, target_to_source_transparent_container: TargetToSourceTransparentContainer) -> Self {
         Self {
-            amf_ue_ngap_id,
-            ran_ue_ngap_id,
-            pdu_session_resource_admitted_list,
+            amf_ue_ngap_id: Some(amf_ue_ngap_id),
+            ran_ue_ngap_id: Some(ran_ue_ngap_id),
+            pdu_session_resource_admitted_list: Some(pdu_session_resource_admitted_list),
             pdu_session_resource_failed_to_setup_list_ho_ack: None,
             target_to_source_transparent_container,
             criticality_diagnostics: None,
@@ -2267,16 +2135,13 @@ impl rt::AperEncode for HandoverRequestAcknowledge {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.amf_ue_ngap_id;
+        if let Some(x) = &self.amf_ue_ngap_id {
             ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.ran_ue_ngap_id;
+        if let Some(x) = &self.ran_ue_ngap_id {
             ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.pdu_session_resource_admitted_list;
+        if let Some(x) = &self.pdu_session_resource_admitted_list {
             ies.push(rt::ie::RawIe::new(53, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.pdu_session_resource_failed_to_setup_list_ho_ack {
@@ -2337,9 +2202,9 @@ impl rt::AperDecode for HandoverRequestAcknowledge {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Ignore)?,
-            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Ignore)?,
-            pdu_session_resource_admitted_list: rt::ie::required(s_pdu_session_resource_admitted_list, 53, rt::ie::Criticality::Ignore)?,
+            amf_ue_ngap_id: rt::ie::tolerate_missing(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Ignore),
+            ran_ue_ngap_id: rt::ie::tolerate_missing(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Ignore),
+            pdu_session_resource_admitted_list: rt::ie::tolerate_missing(s_pdu_session_resource_admitted_list, 53, rt::ie::Criticality::Ignore),
             pdu_session_resource_failed_to_setup_list_ho_ack: s_pdu_session_resource_failed_to_setup_list_ho_ack,
             target_to_source_transparent_container: rt::ie::required(s_target_to_source_transparent_container, 106, rt::ie::Criticality::Reject)?,
             criticality_diagnostics: s_criticality_diagnostics,
@@ -2365,10 +2230,10 @@ impl HandoverRequestAcknowledge {
 /// ASN.1 `HandoverFailure` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HandoverFailure {
-    /// `id-AMF-UE-NGAP-ID` (id 10, Ignore, Mandatory)
-    pub amf_ue_ngap_id: AmfUeNgapId,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
+    /// `id-AMF-UE-NGAP-ID` (id 10, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub amf_ue_ngap_id: Option<AmfUeNgapId>,
+    /// `id-Cause` (id 15, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub cause: Option<Cause>,
     /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
     pub criticality_diagnostics: Option<CriticalityDiagnostics>,
     /// `id-TargettoSource-Failure-TransparentContainer` (id 262, Ignore, Optional)
@@ -2381,8 +2246,8 @@ impl HandoverFailure {
     /// A value with the mandatory IEs given and every optional one absent.
     pub fn new(amf_ue_ngap_id: AmfUeNgapId, cause: Cause) -> Self {
         Self {
-            amf_ue_ngap_id,
-            cause,
+            amf_ue_ngap_id: Some(amf_ue_ngap_id),
+            cause: Some(cause),
             criticality_diagnostics: None,
             targetto_source_failure_transparent_container: None,
             unknown_ies: Vec::new(),
@@ -2394,12 +2259,10 @@ impl rt::AperEncode for HandoverFailure {
     fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
         w.write_bit(false); // extension marker: no additions
         let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.amf_ue_ngap_id;
+        if let Some(x) = &self.amf_ue_ngap_id {
             ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Ignore, x)?);
         }
-        {
-            let x = &self.cause;
+        if let Some(x) = &self.cause {
             ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
         }
         if let Some(x) = &self.criticality_diagnostics {
@@ -2437,8 +2300,8 @@ impl rt::AperDecode for HandoverFailure {
             r.read_extension_additions()?;
         }
         Ok(Self {
-            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Ignore)?,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            amf_ue_ngap_id: rt::ie::tolerate_missing(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Ignore),
+            cause: rt::ie::tolerate_missing(s_cause, 15, rt::ie::Criticality::Ignore),
             criticality_diagnostics: s_criticality_diagnostics,
             targetto_source_failure_transparent_container: s_targetto_source_failure_transparent_container,
             unknown_ies,
@@ -2450,6 +2313,101 @@ impl HandoverFailure {
     /// The ids of the IEs this version of the specification defines for the message, in the order the
     /// specification requires them on the wire.
     pub const IE_IDS: &'static [u32] = &[10, 15, 19, 262];
+
+    /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
+    pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {
+        rt::ie::wire_ie_ids(content, true, rt::Size::range(0, 65535))
+    }
+}
+
+/// ASN.1 `HandoverNotify` (NGAP-PDU-Contents): the IEs of the message are the fields.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HandoverNotify {
+    /// `id-AMF-UE-NGAP-ID` (id 10, Reject, Mandatory)
+    pub amf_ue_ngap_id: AmfUeNgapId,
+    /// `id-RAN-UE-NGAP-ID` (id 85, Reject, Mandatory)
+    pub ran_ue_ngap_id: RanUeNgapId,
+    /// `id-UserLocationInformation` (id 121, Ignore, Mandatory): `None` when the sender omitted it (clause 10.3.5 tolerates that for this criticality); `None` is not written
+    pub user_location_information: Option<UserLocationInformation>,
+    /// `id-NotifySourceNGRANNode` (id 269, Ignore, Optional)
+    pub notify_source_ngran_node: Option<NotifySourceNgranNode>,
+    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
+    pub unknown_ies: Vec<rt::ie::RawIe>,
+}
+
+impl HandoverNotify {
+    /// A value with the mandatory IEs given and every optional one absent.
+    pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId, user_location_information: UserLocationInformation) -> Self {
+        Self {
+            amf_ue_ngap_id,
+            ran_ue_ngap_id,
+            user_location_information: Some(user_location_information),
+            notify_source_ngran_node: None,
+            unknown_ies: Vec::new(),
+        }
+    }
+}
+
+impl rt::AperEncode for HandoverNotify {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        w.write_bit(false); // extension marker: no additions
+        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
+        {
+            let x = &self.amf_ue_ngap_id;
+            ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Reject, x)?);
+        }
+        {
+            let x = &self.ran_ue_ngap_id;
+            ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Reject, x)?);
+        }
+        if let Some(x) = &self.user_location_information {
+            ies.push(rt::ie::RawIe::new(121, rt::ie::Criticality::Ignore, x)?);
+        }
+        if let Some(x) = &self.notify_source_ngran_node {
+            ies.push(rt::ie::RawIe::new(269, rt::ie::Criticality::Ignore, x)?);
+        }
+        ies.extend(self.unknown_ies.iter().cloned());
+        rt::ie::write_container(w, rt::Size::range(0, 65535), &ies)
+    }
+}
+
+impl rt::AperDecode for HandoverNotify {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let extension = r.read_bit()?;
+        let mut s_amf_ue_ngap_id: Option<AmfUeNgapId> = None;
+        let mut s_ran_ue_ngap_id: Option<RanUeNgapId> = None;
+        let mut s_user_location_information: Option<UserLocationInformation> = None;
+        let mut s_notify_source_ngran_node: Option<NotifySourceNgranNode> = None;
+        let mut unknown_ies = Vec::new();
+        for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
+            match ie.id {
+                10 => rt::ie::set_once(&mut s_amf_ue_ngap_id, 10, ie.decode()?)?,
+                85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
+                121 => rt::ie::set_once(&mut s_user_location_information, 121, ie.decode()?)?,
+                269 => rt::ie::set_once(&mut s_notify_source_ngran_node, 269, ie.decode()?)?,
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
+            }
+        }
+        if extension {
+            r.read_extension_additions()?;
+        }
+        Ok(Self {
+            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Reject)?,
+            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Reject)?,
+            user_location_information: rt::ie::tolerate_missing(s_user_location_information, 121, rt::ie::Criticality::Ignore),
+            notify_source_ngran_node: s_notify_source_ngran_node,
+            unknown_ies,
+        })
+    }
+}
+
+impl HandoverNotify {
+    /// The ids of the IEs this version of the specification defines for the message, in the order the
+    /// specification requires them on the wire.
+    pub const IE_IDS: &'static [u32] = &[10, 85, 121, 269];
 
     /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
     pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {

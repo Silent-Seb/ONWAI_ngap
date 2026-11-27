@@ -23,11 +23,17 @@ fn pdu_of(m: NgSetupFailure) -> NgapPdu {
 
 /// A PDU `unsuccessfulOutcome` / procedure 21 around a message whose IEs are exactly `ies` (in that order).
 fn failure_pdu_with(ies: &[RawIe]) -> Vec<u8> {
+    pdu_with(2, ies)
+}
+
+/// A PDU of the given alternative (0 initiating, 1 successful, 2 unsuccessful) of procedure 21 (NG Setup) around a message
+/// whose IEs are exactly `ies` (in that order).
+fn pdu_with(alternative: u64, ies: &[RawIe]) -> Vec<u8> {
     let mut msg = BitWriter::new();
     msg.write_bit(false); // the message SEQUENCE's extension marker
     ie::write_container(&mut msg, Size::range(0, 65535), ies).unwrap();
     let mut w = BitWriter::new();
-    w.write_index(2, 3, true).unwrap(); // NGAP-PDU: unsuccessfulOutcome
+    w.write_index(alternative, 3, true).unwrap(); // NGAP-PDU alternative
     w.write_constrained_int(21, 0, 255).unwrap(); // procedure code
     ie::Criticality::Reject.aper_encode(&mut w).unwrap();
     w.write_open_type(&msg.into_complete_bytes()).unwrap();
@@ -84,23 +90,38 @@ fn ies_may_arrive_in_any_order() {
     assert_eq!(to_vec(&pdu_of(m)).unwrap(), in_spec_order);
 }
 
+/// Clause 10.3.5: a mandatory IE whose criticality is "Ignore" may be absent: the field is `None`, and nothing is written for it.
 #[test]
-fn a_missing_mandatory_ie_reports_its_id_and_criticality() {
-    let e = from_slice::<NgapPdu>(&failure_pdu_with(&[ie_wait()])).unwrap_err();
-    assert_eq!(
-        e.kind,
-        ErrorKind::MissingIe {
-            id: 15,
-            criticality: ie::Criticality::Ignore
-        }
-    );
-    let e = from_slice::<NgapPdu>(&failure_pdu_with(&[])).unwrap_err();
-    assert_eq!(
-        e.kind,
-        ErrorKind::MissingIe {
-            id: 15,
-            criticality: ie::Criticality::Ignore
-        }
+fn a_missing_mandatory_ie_with_criticality_ignore_decodes_as_none() {
+    // `Cause` (id 15) is `Ignore, Mandatory` in the NG Setup Failure
+    for ies in [vec![ie_wait()], vec![]] {
+        let bytes = failure_pdu_with(&ies);
+        let NgapPdu::UnsuccessfulOutcome(UnsuccessfulOutcome::NgSetupFailure(m)) =
+            from_slice::<NgapPdu>(&bytes).unwrap()
+        else {
+            panic!()
+        };
+        assert_eq!(m.cause, None);
+        assert_eq!(m.time_to_wait.is_some(), !ies.is_empty());
+        // decode -> encode gives back the octets that were received (the IE stays absent)
+        assert_eq!(to_vec(&pdu_of(m)).unwrap(), bytes);
+    }
+}
+
+/// A mandatory IE with criticality "Reject" that is missing is an error that carries its id and criticality (10.3.5).
+#[test]
+fn a_missing_mandatory_ie_with_criticality_reject_reports_its_id_and_criticality() {
+    // the NG Setup Response misses everything: the first one the decoder notices is `AMFName` (id 1, Reject, Mandatory)
+    let e = from_slice::<NgapPdu>(&pdu_with(1, &[])).unwrap_err();
+    assert!(
+        matches!(
+            e.kind,
+            ErrorKind::MissingIe {
+                criticality: ie::Criticality::Reject,
+                ..
+            }
+        ),
+        "{e:?}"
     );
 }
 

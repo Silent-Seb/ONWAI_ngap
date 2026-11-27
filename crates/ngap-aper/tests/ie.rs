@@ -539,17 +539,20 @@ fn an_unknown_procedure_reports_its_code_and_criticality() {
 }
 
 #[test]
-fn the_unknown_ie_recorder_collects_only_while_active_and_nests() {
-    use ngap_aper::ie::{Criticality, RawIe, note_unknown, record_unknown_ies};
+fn the_findings_recorder_collects_only_while_active_and_nests() {
+    use ngap_aper::ie::{
+        Criticality, RawIe, note_missing, note_unknown, record_findings, tolerate_missing,
+    };
     let ie = |id| RawIe {
         id,
         criticality: Criticality::Ignore,
         content: vec![0],
     };
     note_unknown(&ie(1)); // nobody is recording: dropped
-    let (((), inner), outer) = record_unknown_ies(|| {
+    let (((), inner), outer) = record_findings(|| {
         note_unknown(&ie(2));
-        let r = record_unknown_ies(|| {
+        note_missing(9, Criticality::Notify);
+        let r = record_findings(|| {
             note_unknown(&ie(3));
         });
         note_unknown(&ie(4));
@@ -557,11 +560,26 @@ fn the_unknown_ie_recorder_collects_only_while_active_and_nests() {
     });
     let ids = |v: &[RawIe]| v.iter().map(|i| i.id).collect::<Vec<_>>();
     assert_eq!(
-        ids(&inner),
+        ids(&inner.unknown),
         vec![3],
-        "the inner scope gets only its own IEs"
+        "the inner scope gets only its own findings"
     );
-    assert_eq!(ids(&outer), vec![2, 4]);
-    let (_, after) = record_unknown_ies(|| {});
-    assert!(after.is_empty(), "nothing leaks into the next recording");
+    assert_eq!(ids(&outer.unknown), vec![2, 4]);
+    assert_eq!(outer.missing, vec![(9, Criticality::Notify)]);
+    let (_, after) = record_findings(|| {});
+    assert!(
+        after.unknown.is_empty() && after.missing.is_empty(),
+        "nothing leaks into the next recording"
+    );
+
+    // an absent mandatory IE that is tolerated: "Ignore" is silent, "Notify" is reported, a present one is passed through
+    let ((a, b, c), f) = record_findings(|| {
+        (
+            tolerate_missing::<u8>(None, 1, Criticality::Ignore),
+            tolerate_missing::<u8>(None, 2, Criticality::Notify),
+            tolerate_missing(Some(7u8), 3, Criticality::Notify),
+        )
+    });
+    assert_eq!((a, b, c), (None, None, Some(7)));
+    assert_eq!(f.missing, vec![(2, Criticality::Notify)]);
 }

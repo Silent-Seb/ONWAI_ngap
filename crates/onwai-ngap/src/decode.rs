@@ -1,6 +1,6 @@
 use ngap_aper::{
     AperError, BitReader, ErrorKind, from_slice,
-    ie::{Criticality, RawIe, read_procedure, record_unknown_ies},
+    ie::{Criticality, RawIe, read_procedure, record_findings},
 };
 use ngap_types::{
     CriticalityDiagnostics, InitiatingMessage, NgapPdu, SuccessfulOutcome, TypeOfError,
@@ -79,8 +79,9 @@ pub fn decode_pdu(bytes: &[u8]) -> Result<Decoded, DecodeError> {
 /// * 10.3.4.1 a procedure code that is not defined,
 /// * 10.3.4.2 IEs that are not defined, at any depth: those of the message, of its list items and of extension
 ///   containers (they also stay in the `unknown_ies` / `ie_extensions` of the value they came from),
-/// * 10.3.5 a missing mandatory IE (at any depth; the first one found is reported, and the typed message cannot
-///   represent an absent mandatory IE, so this is an error whatever its criticality),
+/// * 10.3.5 a missing mandatory IE. With criticality "Reject" it is an error (at any depth; the first one found is
+///   reported). With "Ignore" or "Notify" the message decodes and the field is `None`; "Notify" ones are listed in
+///   [`Decoded::issues`] (no mandatory IE has that criticality in Rel-19, the path is there for later releases),
 /// * 10.3.6 IEs in the wrong order (top level of the message) or occurring too often (at any depth).
 ///
 /// Not detectable here: conditional IEs that are erroneously present, logical errors (10.4), AP ID handling.
@@ -94,9 +95,9 @@ pub fn decode_pdu_with(bytes: &[u8], options: &DecodeOptions) -> Result<Decoded,
             });
         }
     };
-    // the decoders note every IE they do not know, at any depth: those of the message and of its list items and
-    // extension containers
-    let (decoded, not_known) = record_unknown_ies(|| from_slice::<NgapPdu>(bytes));
+    // the decoders note every IE they do not know, at any depth (those of the message and of its list items and
+    // extension containers), and every absent mandatory IE that has to be reported
+    let (decoded, found) = record_findings(|| from_slice::<NgapPdu>(bytes));
     let pdu = match decoded {
         Ok(pdu) => pdu,
         Err(error) => return Err(classify(error, context)),
@@ -104,7 +105,15 @@ pub fn decode_pdu_with(bytes: &[u8], options: &DecodeOptions) -> Result<Decoded,
 
     let mut rejected = Vec::new();
     let mut tolerated = Vec::new();
-    for ie in &not_known {
+    for &(ie_id, criticality) in &found.missing {
+        // 10.3.5, "Ignore IE and Notify Sender": continue without it, and tell the sender
+        tolerated.push(IeIssue {
+            ie_id,
+            criticality,
+            type_of_error: TypeOfError::Missing,
+        });
+    }
+    for ie in &found.unknown {
         let issue = not_understood(ie);
         match ie.criticality {
             Criticality::Reject => rejected.push(issue),
