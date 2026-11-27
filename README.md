@@ -412,8 +412,9 @@ What exists today (all green; `cargo test --workspace` runs about 140 tests):
 12. **A real capture** (`onwai-ngap/tests/capture.rs`, `tests/captures/attach.txt`): 14 NGAP PDUs of one UE registration and PDU session
     set-up between a simulated gNB (UERANSIM) and a 5G core AMF in a lab network — NG Setup, Initial UE Message, NAS transport,
     Initial Context Setup, PDU Session Resource Setup — produced by encoders other than ours. All decode with no diagnostics and
-    encode back to the same octets, which confirms ALIGNED PER against the field. The vectors are sanitised (two public IPv4 addresses
-    and the AMF name replaced by equal-size values) and extracted with `tools/extract_pcap_ngap.py`; the pcap itself is not committed.
+    encode back to the same octets, which confirms ALIGNED PER against the field. The capture itself is committed (`tests/captures/5g_attach.pcap`, 111 packets: the AMF name was replaced by a same-size text and
+    the checksum of that SCTP packet recomputed); the PDUs are extracted with `tools/extract_pcap_ngap.py`, with the two public N3 addresses
+    swapped for documentation addresses.
 13. **Coverage-guided fuzzing** (`fuzz/`, needs nightly + `cargo-fuzz`, see `fuzz/README.md`): the same properties as the mutation test,
     seeded with the 715 PDUs. Not part of `cargo test --workspace` (own workspace). A 10-minute run (4.65 million executions, corpus grown from 715 to about 7,000 inputs) found no crash and no property violation.
 14. **Every named type in Rust** (`ngap-types/tests/all_types.rs`): the 3,876 standalone type vectors decode and re-encode to the same

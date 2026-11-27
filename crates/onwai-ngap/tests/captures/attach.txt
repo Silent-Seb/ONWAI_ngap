@@ -1,9 +1,12 @@
 # NGAP PDUs of one UE registration and PDU session set-up, as captured on N2 between a simulated gNB (UERANSIM) and a
 # 5G core AMF in a lab network (PLMN 999/70, test SUPI), 2025-02-12. Fourteen PDUs: NG Setup, Initial UE Message,
 # NAS transport, Initial Context Setup, PDU Session Resource Setup. `->` is gNB to AMF, `<-` AMF to gNB.
-# Sanitised: the two public IPv4 addresses (N3 transport layer addresses) are replaced by 192.0.2.1 / 192.0.2.2 and the
-# AMF name by a text of the same length; nothing else is changed. Extracted by tools/extract_pcap_ngap.py.
-# `<frame>.<n> <direction> | <hex of the complete NGAP-PDU>`; the original capture is not stored in the repository.
+# The capture is 5g_attach.pcap next to this file (published with the owner's agreement; the AMF name was replaced by a
+# text of the same length and the SCTP checksum of that packet recomputed; nothing else is changed). This file is
+#   python3 -I tools/extract_pcap_ngap.py crates/onwai-ngap/tests/captures/5g_attach.pcap \
+#       --replace 64.23.237.161=192.0.2.1 --replace 137.184.184.232=192.0.2.2
+# i.e. the PDUs with the two public N3 addresses swapped for documentation addresses, so the tests do not depend on them.
+# `<frame>.<n> <direction> | <hex of the complete NGAP-PDU>`
 1.1 -> | 00150041000004001b00090099f9075000000001005240170a00554552414e53494d2d676e622d3939392d37302d310066000d00000000010099f907000000080015400140
 2.1 <- | 201500320000040001000e05806578616d706c652d616d663000600008000099f90702004000564001ff005000080099f90700000008
 3.1 -> | 000f40480000050055000200010026001a197e004179000d0199f9070000000000000000102e04f0f0f0f0007900135099f907000000010099f907000001eb5691f1005a4001180070400100

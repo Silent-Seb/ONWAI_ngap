@@ -14,5 +14,5 @@
 /fuzz/artifacts/
 /fuzz/Cargo.lock
 
-# raw captures stay local; only sanitised NGAP PDUs are committed (crates/onwai-ngap/tests/captures/, tools/extract_pcap_ngap.py)
+# private raw captures stay local (the published one is crates/onwai-ngap/tests/captures/5g_attach.pcap)
 /captures/

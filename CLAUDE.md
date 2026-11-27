@@ -46,8 +46,9 @@ unless asked). The CI workflow's first result has not been checked. Open items, 
 
 1. **Real-world golden vectors**, partly done: `crates/onwai-ngap/tests/capture.rs` checks 14 PDUs from a real gNB/AMF capture
    (one attach + PDU session). More traces would add Handover Required, Paging, Initial Context Setup with more IEs, N2 release.
-   To add one: extract with `tools/extract_pcap_ngap.py` (replace public IPs and any product or subscriber names with same-size
-   dummies, see its `--replace` / `--replace-text`), put the output in `tests/captures/`, never commit the pcap (`/captures/` is git-ignored).
+   To add one: extract with `tools/extract_pcap_ngap.py` into `tests/captures/`. Before committing a pcap, check it for subscriber
+   data, public IPs and product names the user does not want in the repo (`--replace`, `--replace-text` do same-size swaps in the
+   extracted PDUs; a pcap needs its SCTP CRC32c recomputed after a byte change). The user approved publishing `5g_attach.pcap`.
 2. **First CI run.** Push on a branch/draft PR and check `.github/workflows/ci.yml`; set the repo variable `NGAP_SPEC_URL` to
    enable the `spec` and `oracle` jobs (the spec docx is not vendored).
 3. **Clause 10 gaps in the facade** (`crates/onwai-ngap`), what is left: only the first problem is reported; a missing mandatory IE
