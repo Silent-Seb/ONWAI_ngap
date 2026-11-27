@@ -6,7 +6,7 @@ Everything under `crates/ngap-types/src` and `testdata/` is produced, not writte
 
 * The 3GPP document at `specs/38413-j40.docx` (git-ignored), or point `NGAP_SPEC_DOCX` at it. The expected SHA-256 is pinned in
   `codegen/spec-source.toml`; `extract-asn` refuses a different file unless you pass `--no-verify`.
-* Rust 1.100 (`rust-toolchain.toml`). The development host is small (1.85 GB): add `-j2`.
+* Rust 1.100 (`rust-toolchain.toml`). No special flags are needed; on a small host (about 2 GB RAM) add `-j2`.
 * Python 3 with `asn1tools` only for the oracle checks (below); nothing else needs Python.
 
 ## After changing `ngap-codegen`, `ngap-aper` or the sampler

@@ -1,0 +1,22 @@
+[package]
+name = "onwai-ngap-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+onwai-ngap = { path = "../crates/onwai-ngap" }
+
+# its own workspace: the fuzz crate needs nightly and must not be built by `cargo test --workspace`
+[workspace]
+
+[[bin]]
+name = "decode_pdu"
+path = "fuzz_targets/decode_pdu.rs"
+test = false
+doc = false
+bench = false

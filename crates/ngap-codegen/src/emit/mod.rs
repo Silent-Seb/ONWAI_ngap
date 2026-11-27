@@ -89,6 +89,21 @@ pub fn emit(ir: &Ir) -> Result<Vec<GeneratedFile>, EmitError> {
         flush(&mut chunk, &mut files, &mut modules);
     }
 
+    // test support: decode and re-encode a value of any named type, selected by its ASN.1 name
+    let mut by_name = String::from(FILE_HEADER);
+    by_name.push_str(
+        "use ngap_aper as rt;\nuse crate::*;\n\n/// Decodes `bytes` as the standalone APER encoding of the ASN.1 type `name` and encodes the value again; `None` for\n/// an unknown name. Test support (it lets a vector file be checked without naming every type); not part of the API.\n#[doc(hidden)]\npub fn round_trip_by_name(name: &str, bytes: &[u8]) -> Option<rt::Result<Vec<u8>>> {\n    fn rtrip<T: rt::AperDecode + rt::AperEncode>(bytes: &[u8]) -> rt::Result<Vec<u8>> {\n        rt::to_vec(&rt::from_slice::<T>(bytes)?)\n    }\n    Some(match name {\n",
+    );
+    for (asn, rust) in g.type_table() {
+        by_name.push_str(&format!("        {asn:?} => rtrip::<{rust}>(bytes),\n"));
+    }
+    by_name.push_str("        _ => return None,\n    })\n}\n");
+    files.push(GeneratedFile {
+        path: "by_name.rs".into(),
+        content: by_name,
+    });
+    modules.push("by_name".into());
+
     let mut lib = String::from(FILE_HEADER);
     lib.push_str("//! Typed definitions of every message and information element of 3GPP TS 38.413 (NGAP), with ALIGNED PER\n//! encoding and decoding (`ngap_aper::AperEncode` / `AperDecode`). Generated from the ASN.1 of the specification.\n//!\n//! Names follow `docs/mapping-rules.md`: `NGSetupRequest` is `NgSetupRequest`, the IEs of a message are its fields.\n\n#![allow(unused_imports, unused_variables, clippy::all)]\n\npub use ngap_aper::ie::Criticality;\n\n");
     for m in &modules {

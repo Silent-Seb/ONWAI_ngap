@@ -245,6 +245,19 @@ impl<'a> Generator<'a> {
         });
     }
 
+    /// `(ASN.1 name, Rust name)` of every named type, in specification order.
+    pub fn type_table(&self) -> Vec<(&str, &str)> {
+        self.ir
+            .types
+            .iter()
+            .filter_map(|t| {
+                self.type_names
+                    .get(t.name.as_str())
+                    .map(|r| (t.name.as_str(), r.as_str()))
+            })
+            .collect()
+    }
+
     fn rust_name(&self, asn: &str) -> Res<String> {
         self.type_names
             .get(asn)

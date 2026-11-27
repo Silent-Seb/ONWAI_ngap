@@ -12,8 +12,8 @@ first**: it holds the plan, the repo layout, the implementation checklist (keep 
 - Scope is **codec only** (no SCTP, no state machines, no NAS). Don't grow it without asking.
 - After changing the generator or runtime: `cargo fmt --all`, `cargo clippy --workspace --all-targets -- -D warnings`
   (the generated crate opts out), `cargo test --workspace`, `cargo xtask check`.
-- Dev machine has ~1.85 GB RAM: use `-j2` (or `-j1`). The whole `ngap-types` crate type-checks in ~1 min at ~660 MB, so
-  `cargo test --workspace` is fine here; no slicing is needed.
+- The whole `ngap-types` crate type-checks in ~1 min at ~660 MB, so `cargo test --workspace` needs no slicing; on a small
+  host (about 2 GB RAM) add `-j2`.
 - Generated Rust must not use proc-macro derives beyond `Debug, Clone, PartialEq, Eq`.
 - `ngap-aper` is checked against vectors from an independent encoder (`tools/gen_aper_vectors.py`, asn1tools). When a test
   and the oracle disagree, check X.691 before changing either: the oracle is wrong for `INTEGER (lb..MAX)` and lacks
@@ -40,8 +40,9 @@ first**: it holds the plan, the repo layout, the implementation checklist (keep 
 - Robustness: `onwai-ngap/tests/mutation.rs` (`NGAP_SEED`, `NGAP_MUTATIONS`). A failure prints the PDU and the mutation; fix the
   decoder, do not weaken the property.
 
-## Deferred work (recorded 2026-11-25, after steps 0-7 were done; do not push before reading this)
-Nothing is pushed (`origin` is set, no push yet), so the CI workflow has never run. Open items, most valuable first:
+## Deferred work (recorded 2026-11-25, after steps 0-7 were done)
+`main` is pushed to `origin` (history was rewritten once to drop two product names; do not rewrite or force-push again
+unless asked). The CI workflow's first result has not been checked. Open items, most valuable first:
 
 1. **Real-world golden vectors.** Every vector comes from `asn1tools` or from `ngap-testgen`; no capture from a real gNB/AMF
    (Wireshark samples, other public traces) has been tested. Add a few hex dumps (NG Setup Request/Response, Initial UE
@@ -52,11 +53,9 @@ Nothing is pushed (`origin` is set, no push yet), so the CI workflow has never r
 3. **Clause 10 gaps in the facade** (`crates/onwai-ngap`): only the first problem is reported; unknown IEs nested inside list
    items are not examined; conditional IEs that are present when they must not be, and logical errors (10.4), are not detected;
    a missing mandatory IE is always an error (10.3.5 also distinguishes by criticality).
-4. **`cargo-fuzz` target** for `decode_pdu` (not installed on the dev host; the seeded mutation test in `tests/mutation.rs`
-   stands in, ~1.4M mutants for seeds 2-7).
-5. **Rust-side coverage of standalone types.** `testdata/types.txt` (3,876 vectors) is checked only by the Python oracle
-   (`tools/check_vectors.py`); the Rust tests cover messages only, because mapping a type name to a Rust type needs more
-   generated code.
+4. ~~`cargo-fuzz` target~~ done: `fuzz/` (needs nightly, `cargo install cargo-fuzz`; see `fuzz/README.md`). Longer runs (hours) and a
+   fuzz job in CI are still open.
+5. ~~Rust-side coverage of standalone types~~ done: `crates/ngap-types/tests/all_types.rs` via the generated `round_trip_by_name`.
 6. **`PrivateMessage` has no vectors** (its container needs >= 1 private IE and the spec defines none).
 
 Other open items: `examples/` for more procedures, `CHANGELOG`/`CONTRIBUTING`, package metadata (`repository`, `readme`,

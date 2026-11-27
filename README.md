@@ -12,8 +12,8 @@ so it can follow each 3GPP release by re-running the generator. It is a sibling 
 > **Status: working codec, pre-alpha.** All steps of the [plan](#implementation-steps) are done: the spec is extracted, parsed and
 > resolved; `ngap-types` (1,446 generated types with APER encode/decode) is verified against an independent APER implementation
 > on 715 sampled PDUs (every message, five shapes each), 3,876 sampled types and 10 hand-built real PDUs; the `onwai-ngap` facade
-> (`decode_pdu` / `encode_pdu` with clause-10 diagnostics) is mutation-tested. Nothing is published, and the CI workflow has not
-> run yet (the repository has no remote).
+> (`decode_pdu` / `encode_pdu` with clause-10 diagnostics) is mutation-tested. Nothing is published to crates.io, and the CI
+> workflow's first result has not been checked yet.
 
 **Scope (decided):** codec only — typed NGAP PDUs, APER encode/decode, and the decode-time diagnostics that clause 10
 needs. **Not in scope:** SCTP transport (PPID 60, port 38412), per-gNB / per-UE state and AP-ID handling (§10.6),
@@ -92,6 +92,7 @@ ONWAI_ngap/
 ├── Cargo.toml  rust-toolchain.toml  rustfmt.toml     workspace; toolchain pinned to 1.100.0 like ONWAI_sbi
 ├── .cargo/config.toml                                `cargo xtask …` alias
 ├── README.md  CLAUDE.md  LICENSE  NOTICE.md
+├── fuzz/                         cargo-fuzz target for decode_pdu (nightly; own workspace, see fuzz/README.md)
 ├── codegen/
 │   └── spec-source.toml          pinned spec file name, release, SHA-256, transfer syntax
 ├── tools/                        oracle scripts (Python + asn1tools; only needed to regenerate test vectors)
@@ -405,13 +406,16 @@ What exists today (all green; `cargo test --workspace` runs about 140 tests):
     15 ms in any run; a mutant that still decodes is a fixed point (`decode(encode(x)) == x`), the lenient decoder accepts whatever the strict
     one does, and the Error Indication built from a rejection encodes. About 1.4 million mutants (seeds 2–7, 300–400 per PDU) pass. The first
     long run found a real defect: an open type of length 0 was accepted although X.691 11.2 makes its minimum one octet, so the
-    value did not survive a re-encode; `read_open_type` now rejects it. (`cargo-fuzz` is not installed on this host; the
-    mutation test needs no tooling.)
+    value did not survive a re-encode; `read_open_type` now rejects it.
+12. **Coverage-guided fuzzing** (`fuzz/`, needs nightly + `cargo-fuzz`, see `fuzz/README.md`): the same properties as the mutation test,
+    seeded with the 715 PDUs. Not part of `cargo test --workspace` (own workspace). A 10-minute run (4.65 million executions, corpus grown from 715 to about 7,000 inputs) found no crash and no property violation.
+13. **Every named type in Rust** (`ngap-types/tests/all_types.rs`): the 3,876 standalone type vectors decode and re-encode to the same
+    octets through the generated types, selected by ASN.1 name with the generated `round_trip_by_name` (`by_name.rs`, test support).
 
 ## Risks and notes
 
-- **Build memory — resolved.** The development host has 1.85 GB RAM (ONWAI_sbi could not compile its generated crates
-  whole here). `ngap-types` avoids proc-macro derives and keeps the per-type code small (the shared work is in
+- **Build memory — resolved.** The first development host had only 1.85 GB RAM (ONWAI_sbi could not compile its generated
+  crates whole there). `ngap-types` avoids proc-macro derives and keeps the per-type code small (the shared work is in
   `ngap-aper`), so the whole 70k-line crate type-checks in **53 s at 660 MB** (`cargo check -j1`) and the full workspace test
   suite runs on this host. No slicing, feature splitting or deferred CI work is needed.
 - **Open types and ordering.** IE values are open types: the decoder slices by length and decodes against the sub-slice;

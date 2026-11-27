@@ -74,3 +74,5 @@ mod ngap_pdu_contents_06;
 pub use ngap_pdu_contents_06::*;
 mod ngap_pdu_descriptions_00;
 pub use ngap_pdu_descriptions_00::*;
+mod by_name;
+pub use by_name::*;
