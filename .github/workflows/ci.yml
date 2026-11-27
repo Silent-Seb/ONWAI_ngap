@@ -23,6 +23,16 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: env -u CI cargo test --workspace
 
+  # The minimum supported Rust version (`rust-version` in Cargo.toml) is the pinned toolchain 1.100.0, which is what the job
+  # above builds with, so there is no separate MSRV job.
+
+  # Licences, advisories, sources and bans of the dependency tree (deny.toml).
+  deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+
   # Regenerate from the pinned specification and compare with what is committed. Needs the spec: set the repository
   # variable NGAP_SPEC_URL to a place the job can download TS 38.413 v19.4.0 (`38413-j40.docx`) from; the download is
   # verified against the SHA-256 in codegen/spec-source.toml by `cargo xtask extract-asn`.

@@ -1,0 +1,19 @@
+# cargo-deny: licences, advisories and sources of the dependency tree (`cargo deny check`).
+[graph]
+all-features = true
+
+[licenses]
+# what the dependency tree actually uses; a new licence has to be added on purpose
+allow = ["MIT", "Apache-2.0", "Unicode-3.0", "Zlib"]
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# path dependencies between our own (unpublished) crates have no version
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

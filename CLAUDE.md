@@ -60,5 +60,6 @@ unless asked). CI `build-and-test` is green on every push so far (checked 2026-1
 5. ~~Rust-side coverage of standalone types~~ done: `crates/ngap-types/tests/all_types.rs` via the generated `round_trip_by_name`.
 6. **`PrivateMessage` has no vectors** (its container needs >= 1 private IE and the spec defines none).
 
-Other open items: `examples/` for more procedures, `CHANGELOG`/`CONTRIBUTING`, package metadata (`repository`, `readme`,
-`publish = false` for now), optional `serde` feature, `cargo-deny`/MSRV job.
+Other open items: an optional `serde` feature (it would put derives in the generated code, which the rules forbid: needs a design
+decision first), more real traces (see item 1). Done: `CHANGELOG.md`, `CONTRIBUTING.md`, package metadata, `paging` and `decode_capture`
+examples, `deny.toml` + CI `deny` job (the MSRV is the pinned toolchain, so no separate MSRV job).

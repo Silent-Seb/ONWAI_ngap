@@ -321,7 +321,9 @@ match decode_pdu(&bytes) {
 Runnable programs (`cargo run -p onwai-ngap --example <name>`): [`ng_setup`](crates/onwai-ngap/examples/ng_setup.rs) (decode a
 request, answer with NG Setup Response), [`initial_ue_message`](crates/onwai-ngap/examples/initial_ue_message.rs) (NAS-PDU out of
 an Initial UE Message), [`pdu_session_setup`](crates/onwai-ngap/examples/pdu_session_setup.rs) (forward a pre-encoded N2 SM
-container), [`error_handling`](crates/onwai-ngap/examples/error_handling.rs) (what a faulty PDU turns into). The lower-level
+container), [`error_handling`](crates/onwai-ngap/examples/error_handling.rs) (what a faulty PDU turns into),
+[`paging`](crates/onwai-ngap/examples/paging.rs) (build a Paging message), [`decode_capture`](crates/onwai-ngap/examples/decode_capture.rs)
+(decode the 14 PDUs of a real attach). The lower-level
 [`ngap-types` example](crates/ngap-types/examples/roundtrip.rs) uses `ngap_aper::{to_vec, from_slice}` directly (decode errors are then
 `ngap_aper::AperError` with a specific `ErrorKind`: `MissingIe { id, criticality }`, `DuplicateIe`, `UnknownProcedure`, …).
 
