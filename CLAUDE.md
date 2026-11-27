@@ -44,10 +44,10 @@ first**: it holds the plan, the repo layout, the implementation checklist (keep 
 `main` is pushed to `origin` (history was rewritten once to drop two product names; do not rewrite or force-push again
 unless asked). The CI workflow's first result has not been checked. Open items, most valuable first:
 
-1. **Real-world golden vectors.** Every vector comes from `asn1tools` or from `ngap-testgen`; no capture from a real gNB/AMF
-   (Wireshark samples, other public traces) has been tested. Add a few hex dumps (NG Setup Request/Response, Initial UE
-   Message, Initial Context Setup, PDU Session Resource Setup, Handover Required, Paging) to `crates/onwai-ngap/tests/` and
-   require decode -> encode to be byte-identical. This is what would confirm ALIGNED PER against the field.
+1. **Real-world golden vectors**, partly done: `crates/onwai-ngap/tests/capture.rs` checks 14 PDUs from a real gNB/AMF capture
+   (one attach + PDU session). More traces would add Handover Required, Paging, Initial Context Setup with more IEs, N2 release.
+   To add one: extract with `tools/extract_pcap_ngap.py` (replace public IPs and any product or subscriber names with same-size
+   dummies, see its `--replace` / `--replace-text`), put the output in `tests/captures/`, never commit the pcap (`/captures/` is git-ignored).
 2. **First CI run.** Push on a branch/draft PR and check `.github/workflows/ci.yml`; set the repo variable `NGAP_SPEC_URL` to
    enable the `spec` and `oracle` jobs (the spec docx is not vendored).
 3. **Clause 10 gaps in the facade** (`crates/onwai-ngap`), what is left: only the first problem is reported; a missing mandatory IE

@@ -71,7 +71,7 @@ two value-set unions `INTEGER (1..30|40|…|181, ...)`; all character strings ar
 Clause 9.4.1: *"NGAP ASN.1 definition conforms to ITU-T Rec. X.691 [PER], X.680 and X.681."* NGAP is carried in
 **ALIGNED PER** (APER). The spec text does not repeat the word "aligned"; APER is the NGAP convention (as in
 Wireshark). The codec is checked against an independent ALIGNED PER encoder (`asn1tools`, see
-[Verification](#verification)), but **not yet against captures from a real gNB or AMF**: no such trace has been tested.
+[Verification](#verification)), and against a real capture of a gNB and an AMF (verification item 12), but only that one attach/session trace.
 
 Rules from clause 9.4.1 and 10 that the codec honours:
 
@@ -409,9 +409,14 @@ What exists today (all green; `cargo test --workspace` runs about 140 tests):
     one does, and the Error Indication built from a rejection encodes. About 1.4 million mutants (seeds 2–7, 300–400 per PDU) pass. The first
     long run found a real defect: an open type of length 0 was accepted although X.691 11.2 makes its minimum one octet, so the
     value did not survive a re-encode; `read_open_type` now rejects it.
-12. **Coverage-guided fuzzing** (`fuzz/`, needs nightly + `cargo-fuzz`, see `fuzz/README.md`): the same properties as the mutation test,
+12. **A real capture** (`onwai-ngap/tests/capture.rs`, `tests/captures/attach.txt`): 14 NGAP PDUs of one UE registration and PDU session
+    set-up between a simulated gNB (UERANSIM) and a 5G core AMF in a lab network — NG Setup, Initial UE Message, NAS transport,
+    Initial Context Setup, PDU Session Resource Setup — produced by encoders other than ours. All decode with no diagnostics and
+    encode back to the same octets, which confirms ALIGNED PER against the field. The vectors are sanitised (two public IPv4 addresses
+    and the AMF name replaced by equal-size values) and extracted with `tools/extract_pcap_ngap.py`; the pcap itself is not committed.
+13. **Coverage-guided fuzzing** (`fuzz/`, needs nightly + `cargo-fuzz`, see `fuzz/README.md`): the same properties as the mutation test,
     seeded with the 715 PDUs. Not part of `cargo test --workspace` (own workspace). A 10-minute run (4.65 million executions, corpus grown from 715 to about 7,000 inputs) found no crash and no property violation.
-13. **Every named type in Rust** (`ngap-types/tests/all_types.rs`): the 3,876 standalone type vectors decode and re-encode to the same
+14. **Every named type in Rust** (`ngap-types/tests/all_types.rs`): the 3,876 standalone type vectors decode and re-encode to the same
     octets through the generated types, selected by ASN.1 name with the generated `round_trip_by_name` (`by_name.rs`, test support).
 
 ## Risks and notes
