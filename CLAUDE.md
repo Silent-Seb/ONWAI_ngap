@@ -49,10 +49,15 @@ unless asked). CI `build-and-test` is green on every push so far (checked 2026-1
    To add one: extract with `tools/extract_pcap_ngap.py` into `tests/captures/`. Before committing a pcap, check it for subscriber
    data, public IPs and product names the user does not want in the repo (`--replace`, `--replace-text` do same-size swaps in the
    extracted PDUs; a pcap needs its SCTP CRC32c recomputed after a byte change). The user approved publishing `5g_attach.pcap`.
-2. ~~First CI run~~ done and green. The `spec` and `oracle` jobs still skip: set the repo variable `NGAP_SPEC_URL` (a place the job can
+2. ~~First CI run~~ done and green, **but weaker than it looks**: `env -u CI cargo test` makes the spec-dependent tests (`parse_ngap`,
+   `ir_ngap`, `generated_is_current`, `vectors_current`) skip, so without `NGAP_SPEC_URL` CI does not check that the committed generated
+   code and `testdata/` match the generator. Fix: set the variable, or vendor the extracted ASN.1. The `spec` and `oracle` jobs still skip: set the repo variable `NGAP_SPEC_URL` (a place the job can
    download `38413-j40.docx` from; the SHA-256 is checked) to enable them.
-3. **Clause 10 gaps in the facade** (`crates/onwai-ngap`), what is left: only the first problem is reported; a missing mandatory IE
-   is always an error (10.3.5 also distinguishes by criticality; the typed message cannot hold an absent field); conditional IEs
+3. **Clause 10 gaps in the facade** (`crates/onwai-ngap`), what is left: only the first problem is reported; **a missing mandatory IE
+   is always an error and `reaction()` then asks for a rejection, although 10.3.5 says to continue when its criticality is Ignore or
+   Notify (125 of 350 mandatory IEs are Ignore; executable spec: the `#[ignore]`d test in `tests/review.rs`; also `cause()` then says
+   IgnoreAndNotify while `reaction()` says reject)**. Options: make those fields `Option` on decode, or fill a placeholder and list
+   the ids in `Decoded`, or keep the limit and document it. Needs a decision; conditional IEs
    that are present when they must not be, and logical errors (10.4), need semantics/state. Done: unknown IEs at any depth are
    examined (`ngap_aper::ie::record_unknown_ies`, hooked into the three generated sinks).
 4. ~~`cargo-fuzz` target~~ done: `fuzz/` (needs nightly, `cargo install cargo-fuzz`; see `fuzz/README.md`). Longer runs (hours) and a

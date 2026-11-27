@@ -264,7 +264,9 @@ criticality, one item per IE); `criticality_diagnostics()` and `cause()` serve a
 nothing: the caller fills in the AP IDs it knows and transmits.
 
 Limits, on purpose and stated: the first problem found is reported (clause 10.3.1 wants all of them); a missing mandatory IE is
-an error whatever its criticality, because the typed message cannot hold an absent mandatory field; conditional IEs that are
+an error whatever its criticality (clause 10.3.5 wants "Ignore" and "Ignore and Notify" ones tolerated: 125 of the 350 mandatory
+IEs are "Ignore"), because the typed message cannot hold an absent mandatory field, and `reaction()` then asks for the failure
+message or an Error Indication all the same; conditional IEs that are
 erroneously present (10.3.3) and logical errors (10.4) need state or semantics and are not detected. Unknown IEs are examined at
 any depth (message, list items, extension containers): the generated decoders call `ngap_aper::ie::note_unknown` for each one and
 the facade collects them with `record_unknown_ies` (a thread-local scope); the diagnostics list each distinct problem once,

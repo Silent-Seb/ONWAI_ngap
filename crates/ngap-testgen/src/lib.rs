@@ -1,7 +1,7 @@
 //! Valid NGAP encodings sampled from the **resolved ASN.1** (the IR of `ngap-codegen`), independently of the generated
 //! Rust types.
 //!
-//! [`Sampler`] walks an [`IrType`], decides every choice (which optional component is present, how long a list is, which
+//! [`Sampler`] walks an [`IrType`](ngap_codegen::ir::IrType), decides every choice (which optional component is present, how long a list is, which
 //! alternative) and writes the APER encoding directly with the `ngap-aper` primitives. It therefore knows the structure
 //! of the spec but shares no code with the emitter, which makes its output a test of the emitter: the generated types
 //! must decode every sample and re-encode it to the same octets. The Python oracle (`tools/check_vectors.py`) checks the

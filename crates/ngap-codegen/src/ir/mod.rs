@@ -9,7 +9,7 @@
 //! * every information object set as concrete rows (id, criticality, presence, type), in the order the spec lists them;
 //! * every elementary procedure (code, criticality, class 1/2, message types).
 //!
-//! [`validate`](validate::validate) then checks the whole IR for consistency (dangling references, duplicate ids, ...).
+//! `validate` then checks the whole IR for consistency (dangling references, duplicate ids, ...).
 
 mod build;
 mod census;

@@ -10,8 +10,6 @@ license = "Apache-2.0"
 authors = ["ONWAI_ngap contributors"]
 publish = false
 repository = "https://github.com/Silent-Seb/ONWAI_ngap"
-homepage = "https://github.com/Silent-Seb/ONWAI_ngap"
-readme = "README.md"
 keywords = ["ngap", "5g", "3gpp", "asn1", "per"]
 categories = ["parser-implementations", "encoding", "network-programming"]
 
