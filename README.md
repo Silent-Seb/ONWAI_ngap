@@ -33,8 +33,9 @@ Those are later layers that sit on top of this crate.
 | ASN.1 location | clause 9.4.3 – 9.4.8 (six modules, 14,685 lines) |
 | Download | <https://www.3gpp.org/ftp/Specs/archive/38_series/38.413/> |
 
-The spec is **not vendored** (git-ignored `specs/`; see [`codegen/spec-source.toml`](codegen/spec-source.toml) and
-[`NOTICE.md`](NOTICE.md)). © 3GPP Organizational Partners (ARIB, ATIS, CCSA, ETSI, TSDSI, TTA, TTC). Where this README
+The Word document is **not vendored** (git-ignored `specs/*.docx`), but the six ASN.1 modules extracted from it are committed
+in `specs/asn1/` (unmodified; SHA-256 pinned in [`codegen/spec-source.toml`](codegen/spec-source.toml); see [`NOTICE.md`](NOTICE.md)),
+so building, testing and CI need no download. © 3GPP Organizational Partners (ARIB, ATIS, CCSA, ETSI, TSDSI, TTA, TTC). Where this README
 and the specification disagree, **the specification wins**.
 
 ### What the ASN.1 contains (measured)
@@ -197,8 +198,7 @@ Information objects such as `{ ID id-X CRITICALITY reject TYPE T PRESENCE mandat
 their users. `parse_modules` therefore **pre-scans every source for class definitions**, then parses each module against
 that registry; the objects come out as `field → type | value` pairs and an object that lacks a mandatory field is an error.
 
-Gates (`crates/ngap-codegen/tests/parse_ngap.rs`, need `specs/asn1`; they skip with a message if it is absent and fail
-when `CI` is set): token counts of `ENUMERATED`, `CHOICE`, `SEQUENCE`, `OF`, `NULL`, `INTEGER`, `BIT`, `OCTET`, `OBJECT`,
+Gates (`crates/ngap-codegen/tests/parse_ngap.rs`, on the committed `specs/asn1`): token counts of `ENUMERATED`, `CHOICE`, `SEQUENCE`, `OF`, `NULL`, `INTEGER`, `BIT`, `OCTET`, `OBJECT`,
 `CONTAINING`, `SIZE`, character-string keywords, `CLASS`, `OPTIONAL`, `FROM`, `...`, `::=`, `@`, `:`, `;` and `[` equal the
 corresponding AST counts; every imported symbol is defined by the module it comes from (and `Name{}` marks exactly the
 parameterized ones); every object-set reference names something defined. A second test pins the census of the
@@ -332,12 +332,13 @@ container), [`error_handling`](crates/onwai-ngap/examples/error_handling.rs) (wh
 ## Regenerating from the spec
 
 ```bash
-# 1. put the pinned spec at specs/38413-j40.docx (git-ignored); or export NGAP_SPEC_DOCX=/path/to/38413-j40.docx
-cargo xtask extract-asn          # docx → specs/asn1/NGAP-*.asn  (6 files); checks SHA-256 against spec-source.toml
+# 1. only to re-extract the ASN.1 (it is committed): put the pinned spec at specs/38413-j40.docx (git-ignored), or export
+#    NGAP_SPEC_DOCX=/path/to/38413-j40.docx
+cargo xtask extract-asn          # docx → specs/asn1/NGAP-*.asn  (6 files); checks SHA-256 against spec-source.toml; `git diff` must stay empty
 cargo xtask stats                # parse the .asn files and print the construct census (compare with the table above)
 cargo xtask gen                  # regenerate crates/ngap-types/src (32 files)
 cargo xtask check                # regenerate in memory and diff against committed files (CI gate)
-cargo test --workspace            # all tests; the ones needing specs/asn1 skip with a message if it is absent
+cargo test --workspace            # all tests (specs/asn1 is committed, nothing is skipped)
 cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings   # the generated crate opts out
 ```
 

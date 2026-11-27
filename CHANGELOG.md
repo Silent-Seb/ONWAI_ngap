@@ -8,7 +8,7 @@ project is pre-alpha and not published to crates.io (`publish = false`), so ther
 ### Added
 - **Step 0, bootstrap:** Cargo workspace (edition 2024, `unsafe` forbidden, clippy `all`), pinned toolchain 1.100.0, `cargo xtask` alias.
 - **Step 1, spec ingestion:** `cargo xtask extract-asn` pulls the six ASN.1 modules of clause 9.4 out of TS 38.413 v19.4.0
-  (`38413-j40.docx`, SHA-256 pinned in `codegen/spec-source.toml`; the spec itself is not vendored).
+  (`38413-j40.docx`, SHA-256 pinned in `codegen/spec-source.toml`; the Word document is not vendored).
 - **Step 2, `ngap-aper`:** the ALIGNED PER (X.691) runtime — integers, length determinants with fragmentation, strings, OID,
   extension additions, open types, `Contained<T>`, IE containers — checked against an independent encoder (`asn1tools`).
 - **Steps 3 and 4, `ngap-codegen`:** ASN.1 front end (lexer, parser, census gates) and the resolver/IR (container instantiation per
@@ -26,6 +26,9 @@ project is pre-alpha and not published to crates.io (`publish = false`), so ther
   `deny.toml` and a `deny` CI job (`cargo deny check`: licences, advisories, sources, bans).
 
 ### Changed
+- The six extracted ASN.1 modules are committed in `specs/asn1/` (unmodified; SHA-256 pinned, `tests/spec_modules.rs`), so the spec-dependent
+  tests run everywhere, including CI, which no longer sets `env -u CI`. Before, CI skipped them and did not check that the generated code and
+  `testdata/` match the generator.
 - Unknown IEs are examined at any depth (message, list items, extension containers), not only at the top level of a message
   (clause 10.3.4.2). `ngap_aper::ie::note_unknown` / `record_unknown_ies` carry them from the generated decoders to the facade.
 - The Criticality Diagnostics built from a decode problem lists each distinct problem once, at most 256 (`maxnoofErrors`).

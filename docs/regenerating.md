@@ -4,8 +4,10 @@ Everything under `crates/ngap-types/src` and `testdata/` is produced, not writte
 
 ## Prerequisites
 
-* The 3GPP document at `specs/38413-j40.docx` (git-ignored), or point `NGAP_SPEC_DOCX` at it. The expected SHA-256 is pinned in
-  `codegen/spec-source.toml`; `extract-asn` refuses a different file unless you pass `--no-verify`.
+* Normally nothing: the extracted ASN.1 is committed in `specs/asn1/`. Only to re-extract it (or to move to a new release) you need the
+  3GPP document at `specs/38413-j40.docx` (git-ignored), or point `NGAP_SPEC_DOCX` at it. The expected SHA-256 is pinned in
+  `codegen/spec-source.toml`; `extract-asn` refuses a different file unless you pass `--no-verify`. After extracting, `git diff specs/asn1`
+  must be empty (or you have a new release: update the pins and the `[modules]` hashes).
 * Rust 1.100 (`rust-toolchain.toml`). No special flags are needed; on a small host (about 2 GB RAM) add `-j2`.
 * Python 3 with `asn1tools` only for the oracle checks (below); nothing else needs Python.
 
@@ -19,7 +21,7 @@ cargo fmt --all && cargo clippy --workspace --all-targets -- -D warnings && carg
 ```
 
 `cargo test` also fails if the committed files are stale (`ngap-codegen/tests/generated_is_current.rs`,
-`ngap-testgen/tests/vectors_current.rs`), unless `specs/asn1` is absent, in which case those tests skip (they fail if `CI` is set).
+`ngap-testgen/tests/vectors_current.rs`), and `ngap-codegen/tests/spec_modules.rs` fails if a file in `specs/asn1` is not the pinned extraction.
 
 ## Moving to a newer TS 38.413
 

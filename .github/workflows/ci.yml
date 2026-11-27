@@ -8,8 +8,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # The 3GPP specification is not vendored (see NOTICE.md), so the tests that read `specs/asn1` skip here.
-  # `env -u CI` makes them skip instead of fail.
+  # The 3GPP Word document is not vendored (see NOTICE.md), but the ASN.1 modules extracted from it are committed in
+  # `specs/asn1`, so every test runs here, including the ones that check the generated code and `testdata/` against the generator.
   build-and-test:
     runs-on: ubuntu-latest
     steps:
@@ -21,7 +21,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
-      - run: env -u CI cargo test --workspace
+      - run: cargo test --workspace
+      - run: cargo xtask check
       - run: cargo doc --workspace --no-deps
         env:
           RUSTDOCFLAGS: -D warnings
@@ -36,9 +37,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: EmbarkStudios/cargo-deny-action@v2
 
-  # Regenerate from the pinned specification and compare with what is committed. Needs the spec: set the repository
-  # variable NGAP_SPEC_URL to a place the job can download TS 38.413 v19.4.0 (`38413-j40.docx`) from; the download is
-  # verified against the SHA-256 in codegen/spec-source.toml by `cargo xtask extract-asn`.
+  # Re-extract the ASN.1 from the pinned Word document and require it to equal the committed `specs/asn1`. Needs the document:
+  # set the repository variable NGAP_SPEC_URL to a place the job can download TS 38.413 v19.4.0 (`38413-j40.docx`) from; the
+  # download is verified against the SHA-256 in codegen/spec-source.toml by `cargo xtask extract-asn`. (The build-and-test job
+  # needs no download: the extracted modules are committed.)
   spec:
     if: ${{ vars.NGAP_SPEC_URL != '' }}
     runs-on: ubuntu-latest
@@ -50,8 +52,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: mkdir -p specs && curl -fsSL "${{ vars.NGAP_SPEC_URL }}" -o specs/38413-j40.docx
       - run: cargo xtask extract-asn
-      - run: cargo xtask check
-      - run: cargo test --workspace
+      # the committed modules must be what the pinned document yields
+      - run: git diff --exit-code specs/asn1
 
   # Compare the sampled vectors with an independent APER implementation (Python `asn1tools`).
   oracle:

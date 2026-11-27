@@ -6,7 +6,8 @@
 # scratch output of `cargo xtask gen --out` / `check`
 /.xtask-tmp/
 # the 3GPP spec (docx) and the ASN.1 extracted from it are NOT vendored (see codegen/spec-source.toml)
-/specs/
+/specs/*
+!/specs/asn1/
 
 # cargo-fuzz (see fuzz/README.md)
 /fuzz/target/

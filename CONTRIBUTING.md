@@ -20,8 +20,9 @@ cargo test --workspace
 cargo xtask check
 cargo deny check        # optional locally: `cargo install cargo-deny --locked`; CI runs it
 ```
-On a host with about 2 GB of RAM add `-j2`. CI runs the first three on every push. The spec-based jobs need the 3GPP document, which
-is not part of the repository (see `codegen/spec-source.toml` for the pinned file and its SHA-256).
+On a host with about 2 GB of RAM add `-j2`. CI runs the first three on every push. The extracted ASN.1 modules are committed in `specs/asn1/` (never edit them by hand); the 3GPP
+Word document itself is not part of the repository (see `codegen/spec-source.toml` for the pinned file and its SHA-256) and is needed only
+to re-extract them or for the optional CI jobs.
 
 ## Tests
 - A change to the APER runtime needs a unit test, and a vector from an independent encoder where one exists

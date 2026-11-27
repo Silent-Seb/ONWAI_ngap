@@ -1,7 +1,8 @@
-# Where the NGAP ASN.1 comes from. The spec is NOT vendored in this repository.
-# `cargo xtask extract-asn` reads the 3GPP TS 38.413 Word document from `specs/38413-j40.docx` (git-ignored)
-# unless `--docx <file>` or the `NGAP_SPEC_DOCX` environment variable is given, and writes the six ASN.1 modules to
-# `specs/asn1/` (git-ignored). Download: https://www.3gpp.org/ftp/Specs/archive/38_series/38.413/ (file 38413-j40.zip).
+# Where the NGAP ASN.1 comes from. The Word document is NOT vendored in this repository (git-ignored `specs/*.docx`); the six
+# ASN.1 modules extracted from it ARE committed in `specs/asn1/` (unmodified text of clause 9.4 of the specification, see NOTICE.md),
+# so building and testing needs no download. `cargo xtask extract-asn` reads the 3GPP TS 38.413 document from
+# `specs/38413-j40.docx` unless `--docx <file>` or the `NGAP_SPEC_DOCX` environment variable is given, and rewrites `specs/asn1/`;
+# `git diff specs/asn1` must then be empty. Download: https://www.3gpp.org/ftp/Specs/archive/38_series/38.413/ (file 38413-j40.zip).
 spec = "TS 38.413"
 title = "NG Application Protocol (NGAP)"
 release = "Rel-19"
@@ -10,3 +11,13 @@ file = "38413-j40.docx"
 sha256 = "fb2cd9b8c2606da79aa0008faaedcc01ecd1de3ea1595242c35674215c7d66ef"
 # transfer syntax of the ASN.1 (ITU-T X.691), see README "Wire format"
 encoding = "ALIGNED-PER"
+
+# SHA-256 of the committed, extracted modules (`crates/ngap-codegen/tests/spec_modules.rs` checks them: they are extraction output,
+# never edited by hand; regenerate them with `cargo xtask extract-asn` and update this table together with the docx pin above).
+[modules]
+"NGAP-CommonDataTypes.asn" = "7ef5ad96e7427eb523c9da74bc217146597ccc7db0b67417124c65bb5b218451"
+"NGAP-Constants.asn" = "822e4594ebc6b5040974ccd90307f8a8d5e68bd92133523656187cfbd6a1738d"
+"NGAP-Containers.asn" = "19f2040a921f01deb604b8ddfd7b35830bdb839aa335c35fa1a2d5f9fef46297"
+"NGAP-IEs.asn" = "dbf86b5c9e5720fb9d0cb4cb9a4ec767eebd7a405b19fa9da7098138c215b9a9"
+"NGAP-PDU-Contents.asn" = "c32ede306a6757963f91c52af4ee0c5ee1b37f8ab468ecd4e9191e8de4aed3c6"
+"NGAP-PDU-Descriptions.asn" = "9f2362a574bf18ecac16bb7e5ce5e67717bde6f670567627dd6aad0313eb677e"

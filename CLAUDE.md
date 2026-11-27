@@ -7,8 +7,9 @@ first**: it holds the plan, the repo layout, the implementation checklist (keep 
 - `crates/ngap-types` is **generated and committed**. Never edit it by hand: fix `crates/ngap-codegen` (or the
   runtime `crates/ngap-aper`), run `cargo xtask gen`, and `cargo xtask check` must report "generated code is up to date".
 - Hand-written crates: `ngap-aper`, `ngap-codegen`, `onwai-ngap`, `xtask`. `unsafe` is forbidden.
-- The 3GPP spec is **not vendored**: `specs/38413-j40.docx` (or `NGAP_SPEC_DOCX` / `--docx`) and the extracted
-  `specs/asn1/*.asn` are git-ignored. The pinned SHA-256 is in `codegen/spec-source.toml`.
+- The 3GPP Word document is **not vendored** (`specs/38413-j40.docx`, git-ignored; `NGAP_SPEC_DOCX` / `--docx`), but the extracted
+  `specs/asn1/*.asn` are **committed and never edited by hand**: re-run `cargo xtask extract-asn` (`git diff` must be empty); their
+  SHA-256 are pinned in `codegen/spec-source.toml` and checked by `ngap-codegen/tests/spec_modules.rs`.
 - Scope is **codec only** (no SCTP, no state machines, no NAS). Don't grow it without asking.
 - After changing the generator or runtime: `cargo fmt --all`, `cargo clippy --workspace --all-targets -- -D warnings`
   (the generated crate opts out), `cargo test --workspace`, `cargo xtask check`.
@@ -49,10 +50,9 @@ unless asked). CI `build-and-test` is green on every push so far (checked 2026-1
    To add one: extract with `tools/extract_pcap_ngap.py` into `tests/captures/`. Before committing a pcap, check it for subscriber
    data, public IPs and product names the user does not want in the repo (`--replace`, `--replace-text` do same-size swaps in the
    extracted PDUs; a pcap needs its SCTP CRC32c recomputed after a byte change). The user approved publishing `5g_attach.pcap`.
-2. ~~First CI run~~ done and green, **but weaker than it looks**: `env -u CI cargo test` makes the spec-dependent tests (`parse_ngap`,
-   `ir_ngap`, `generated_is_current`, `vectors_current`) skip, so without `NGAP_SPEC_URL` CI does not check that the committed generated
-   code and `testdata/` match the generator. Fix: set the variable, or vendor the extracted ASN.1. The `spec` and `oracle` jobs still skip: set the repo variable `NGAP_SPEC_URL` (a place the job can
-   download `38413-j40.docx` from; the SHA-256 is checked) to enable them.
+2. ~~First CI run~~ done and green. The extracted ASN.1 is committed (`specs/asn1`), so the spec-dependent tests (census, IR gates, generated
+   code and testdata up to date) now run in CI too; the optional `spec`/`oracle` jobs (repo variable `NGAP_SPEC_URL`) additionally re-extract from
+   the docx (`git diff --exit-code specs/asn1`) and compare with the Python oracle.
 3. **Clause 10 gaps in the facade** (`crates/onwai-ngap`), what is left: only the first problem is reported; **a missing mandatory IE
    is always an error and `reaction()` then asks for a rejection, although 10.3.5 says to continue when its criticality is Ignore or
    Notify (125 of 350 mandatory IEs are Ignore; executable spec: the `#[ignore]`d test in `tests/review.rs`; also `cause()` then says
