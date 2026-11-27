@@ -60,6 +60,19 @@ unless asked). CI `build-and-test` is green on every push so far (checked 2026-1
 5. ~~Rust-side coverage of standalone types~~ done: `crates/ngap-types/tests/all_types.rs` via the generated `round_trip_by_name`.
 6. **`PrivateMessage` has no vectors** (its container needs >= 1 private IE and the spec defines none).
 
-Other open items: an optional `serde` feature (it would put derives in the generated code, which the rules forbid: needs a design
-decision first), more real traces (see item 1). Done: `CHANGELOG.md`, `CONTRIBUTING.md`, package metadata, `paging` and `decode_capture`
+Other open items: more real traces (see item 1). Done: `CHANGELOG.md`, `CONTRIBUTING.md`, package metadata, `paging` and `decode_capture`
 examples, `deny.toml` + CI `deny` job (the MSRV is the pinned toolchain, so no separate MSRV job).
+
+## Future work: optional `serde` feature (decided 2026-11-28: skip for now, no consumer yet)
+Do it only when something needs JSON (structured logs, a decoded-PDU dump for tooling or a UI, JSON fixtures); `Debug` covers the rest.
+Decisions to take first:
+1. **Mechanism.** A: `#[cfg_attr(feature = "serde", derive(serde::Serialize))]` on the generated types (simple; off by default; needs the
+   "no proc-macro derives" rule amended to "except behind the `serde` feature"), or B: the emitter writes the `impl Serialize` code
+   itself (keeps the rule; much more generated code and generator work). Recommended: A. `ngap-aper` types (`BitString`, `RawIe`,
+   `Contained<T>`, `UnknownIes`) need impls too.
+2. **Shape of the JSON** (a versioned public format once people depend on it): field/variant names (Rust snake_case or the spec's ASN.1
+   names, e.g. `pLMNIdentity`); binary data as hex / base64 / byte array (a `BitString` also needs its bit length); `Contained<T>` as raw
+   hex or the decoded value; unknown IEs (id, criticality, raw bytes); enums by name or number, and extension values.
+3. **Serialize only, or Deserialize too.** Recommended: `Serialize` only. A derived `Deserialize` would bypass the range/size checks of the
+   newtypes and allow values that fail later at encode time; doing it properly needs validated constructors.
+4. CI: build and test with the feature on (a job), keep it off by default, and check `cargo deny` still passes.
