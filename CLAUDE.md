@@ -42,15 +42,15 @@ first**: it holds the plan, the repo layout, the implementation checklist (keep 
 
 ## Deferred work (recorded 2026-11-25, after steps 0-7 were done)
 `main` is pushed to `origin` (history was rewritten once to drop two product names; do not rewrite or force-push again
-unless asked). The CI workflow's first result has not been checked. Open items, most valuable first:
+unless asked). CI `build-and-test` is green on every push so far (checked 2026-11-28 through the public API: runs of 4a5e4bf, 14d20f1, 4b578c0). Open items, most valuable first:
 
 1. **Real-world golden vectors**, partly done: `crates/onwai-ngap/tests/capture.rs` checks 14 PDUs from a real gNB/AMF capture
    (one attach + PDU session). More traces would add Handover Required, Paging, Initial Context Setup with more IEs, N2 release.
    To add one: extract with `tools/extract_pcap_ngap.py` into `tests/captures/`. Before committing a pcap, check it for subscriber
    data, public IPs and product names the user does not want in the repo (`--replace`, `--replace-text` do same-size swaps in the
    extracted PDUs; a pcap needs its SCTP CRC32c recomputed after a byte change). The user approved publishing `5g_attach.pcap`.
-2. **First CI run.** Push on a branch/draft PR and check `.github/workflows/ci.yml`; set the repo variable `NGAP_SPEC_URL` to
-   enable the `spec` and `oracle` jobs (the spec docx is not vendored).
+2. ~~First CI run~~ done and green. The `spec` and `oracle` jobs still skip: set the repo variable `NGAP_SPEC_URL` (a place the job can
+   download `38413-j40.docx` from; the SHA-256 is checked) to enable them.
 3. **Clause 10 gaps in the facade** (`crates/onwai-ngap`), what is left: only the first problem is reported; a missing mandatory IE
    is always an error (10.3.5 also distinguishes by criticality; the typed message cannot hold an absent field); conditional IEs
    that are present when they must not be, and logical errors (10.4), need semantics/state. Done: unknown IEs at any depth are

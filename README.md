@@ -12,8 +12,9 @@ so it can follow each 3GPP release by re-running the generator. It is a sibling 
 > **Status: working codec, pre-alpha.** All steps of the [plan](#implementation-steps) are done: the spec is extracted, parsed and
 > resolved; `ngap-types` (1,446 generated types with APER encode/decode) is verified against an independent APER implementation
 > on 715 sampled PDUs (every message, five shapes each), 3,876 sampled types and 10 hand-built real PDUs; the `onwai-ngap` facade
-> (`decode_pdu` / `encode_pdu` with clause-10 diagnostics) is mutation-tested. Nothing is published to crates.io, and the CI
-> workflow's first result has not been checked yet.
+> (`decode_pdu` / `encode_pdu` with clause-10 diagnostics) is mutation-tested. Nothing is published to crates.io. CI
+> (`build-and-test`: fmt, clippy `-D warnings`, `cargo test --workspace`) is green on every push so far (checked 2026-11-28); the `spec`
+> and `oracle` jobs are skipped until the repository variable `NGAP_SPEC_URL` is set.
 
 **Scope (decided):** codec only — typed NGAP PDUs, APER encode/decode, and the decode-time diagnostics that clause 10
 needs. **Not in scope:** SCTP transport (PPID 60, port 38412), per-gNB / per-UE state and AP-ID handling (§10.6),
