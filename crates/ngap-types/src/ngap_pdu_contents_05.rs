@@ -5,6 +5,176 @@ use ngap_aper as rt;
 use rt::{AperDecode as _, AperEncode as _};
 use crate::*;
 
+/// ASN.1 `BroadcastSessionModificationRequest` (NGAP-PDU-Contents): the IEs of the message are the fields.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BroadcastSessionModificationRequest {
+    /// `id-MBS-SessionID` (id 299, Reject, Mandatory)
+    pub mbs_session_id: MbsSessionId,
+    /// `id-MBS-ServiceArea` (id 298, Reject, Optional)
+    pub mbs_service_area: Option<MbsServiceArea>,
+    /// `id-MBSSessionModificationRequestTransfer` (id 349, Reject, Optional)
+    pub mbs_session_modification_request_transfer: Option<rt::Contained<MbsSessionSetupOrModRequestTransfer>>,
+    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
+    pub unknown_ies: Vec<rt::ie::RawIe>,
+}
+
+impl BroadcastSessionModificationRequest {
+    /// A value with the mandatory IEs given and every optional one absent.
+    pub fn new(mbs_session_id: MbsSessionId) -> Self {
+        Self {
+            mbs_session_id,
+            mbs_service_area: None,
+            mbs_session_modification_request_transfer: None,
+            unknown_ies: Vec::new(),
+        }
+    }
+}
+
+impl rt::AperEncode for BroadcastSessionModificationRequest {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        w.write_bit(false); // extension marker: no additions
+        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
+        {
+            let x = &self.mbs_session_id;
+            ies.push(rt::ie::RawIe::new(299, rt::ie::Criticality::Reject, x)?);
+        }
+        if let Some(x) = &self.mbs_service_area {
+            ies.push(rt::ie::RawIe::new(298, rt::ie::Criticality::Reject, x)?);
+        }
+        if let Some(x) = &self.mbs_session_modification_request_transfer {
+            ies.push(rt::ie::RawIe::new(349, rt::ie::Criticality::Reject, x)?);
+        }
+        ies.extend(self.unknown_ies.iter().cloned());
+        rt::ie::write_container(w, rt::Size::range(0, 65535), &ies)
+    }
+}
+
+impl rt::AperDecode for BroadcastSessionModificationRequest {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let extension = r.read_bit()?;
+        let mut s_mbs_session_id: Option<MbsSessionId> = None;
+        let mut s_mbs_service_area: Option<MbsServiceArea> = None;
+        let mut s_mbs_session_modification_request_transfer: Option<rt::Contained<MbsSessionSetupOrModRequestTransfer>> = None;
+        let mut unknown_ies = Vec::new();
+        for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
+            match ie.id {
+                299 => rt::ie::set_once(&mut s_mbs_session_id, 299, ie.decode()?)?,
+                298 => rt::ie::set_once(&mut s_mbs_service_area, 298, ie.decode()?)?,
+                349 => rt::ie::set_once(&mut s_mbs_session_modification_request_transfer, 349, ie.decode()?)?,
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
+            }
+        }
+        if extension {
+            r.read_extension_additions()?;
+        }
+        Ok(Self {
+            mbs_session_id: rt::ie::required(s_mbs_session_id, 299, rt::ie::Criticality::Reject)?,
+            mbs_service_area: s_mbs_service_area,
+            mbs_session_modification_request_transfer: s_mbs_session_modification_request_transfer,
+            unknown_ies,
+        })
+    }
+}
+
+impl BroadcastSessionModificationRequest {
+    /// The ids of the IEs this version of the specification defines for the message, in the order the
+    /// specification requires them on the wire.
+    pub const IE_IDS: &'static [u32] = &[299, 298, 349];
+
+    /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
+    pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {
+        rt::ie::wire_ie_ids(content, true, rt::Size::range(0, 65535))
+    }
+}
+
+/// ASN.1 `BroadcastSessionModificationResponse` (NGAP-PDU-Contents): the IEs of the message are the fields.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BroadcastSessionModificationResponse {
+    /// `id-MBS-SessionID` (id 299, Reject, Mandatory)
+    pub mbs_session_id: MbsSessionId,
+    /// `id-MBSSessionModificationResponseTransfer` (id 350, Reject, Optional)
+    pub mbs_session_modification_response_transfer: Option<rt::Contained<MbsSessionSetupOrModResponseTransfer>>,
+    /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
+    pub criticality_diagnostics: Option<CriticalityDiagnostics>,
+    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
+    pub unknown_ies: Vec<rt::ie::RawIe>,
+}
+
+impl BroadcastSessionModificationResponse {
+    /// A value with the mandatory IEs given and every optional one absent.
+    pub fn new(mbs_session_id: MbsSessionId) -> Self {
+        Self {
+            mbs_session_id,
+            mbs_session_modification_response_transfer: None,
+            criticality_diagnostics: None,
+            unknown_ies: Vec::new(),
+        }
+    }
+}
+
+impl rt::AperEncode for BroadcastSessionModificationResponse {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        w.write_bit(false); // extension marker: no additions
+        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
+        {
+            let x = &self.mbs_session_id;
+            ies.push(rt::ie::RawIe::new(299, rt::ie::Criticality::Reject, x)?);
+        }
+        if let Some(x) = &self.mbs_session_modification_response_transfer {
+            ies.push(rt::ie::RawIe::new(350, rt::ie::Criticality::Reject, x)?);
+        }
+        if let Some(x) = &self.criticality_diagnostics {
+            ies.push(rt::ie::RawIe::new(19, rt::ie::Criticality::Ignore, x)?);
+        }
+        ies.extend(self.unknown_ies.iter().cloned());
+        rt::ie::write_container(w, rt::Size::range(0, 65535), &ies)
+    }
+}
+
+impl rt::AperDecode for BroadcastSessionModificationResponse {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let extension = r.read_bit()?;
+        let mut s_mbs_session_id: Option<MbsSessionId> = None;
+        let mut s_mbs_session_modification_response_transfer: Option<rt::Contained<MbsSessionSetupOrModResponseTransfer>> = None;
+        let mut s_criticality_diagnostics: Option<CriticalityDiagnostics> = None;
+        let mut unknown_ies = Vec::new();
+        for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
+            match ie.id {
+                299 => rt::ie::set_once(&mut s_mbs_session_id, 299, ie.decode()?)?,
+                350 => rt::ie::set_once(&mut s_mbs_session_modification_response_transfer, 350, ie.decode()?)?,
+                19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
+            }
+        }
+        if extension {
+            r.read_extension_additions()?;
+        }
+        Ok(Self {
+            mbs_session_id: rt::ie::required(s_mbs_session_id, 299, rt::ie::Criticality::Reject)?,
+            mbs_session_modification_response_transfer: s_mbs_session_modification_response_transfer,
+            criticality_diagnostics: s_criticality_diagnostics,
+            unknown_ies,
+        })
+    }
+}
+
+impl BroadcastSessionModificationResponse {
+    /// The ids of the IEs this version of the specification defines for the message, in the order the
+    /// specification requires them on the wire.
+    pub const IE_IDS: &'static [u32] = &[299, 350, 19];
+
+    /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
+    pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {
+        rt::ie::wire_ie_ids(content, true, rt::Size::range(0, 65535))
+    }
+}
+
 /// ASN.1 `BroadcastSessionModificationFailure` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BroadcastSessionModificationFailure {
@@ -70,7 +240,10 @@ impl rt::AperDecode for BroadcastSessionModificationFailure {
                 348 => rt::ie::set_once(&mut s_mbs_session_modification_failure_transfer, 348, ie.decode()?)?,
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -146,7 +319,10 @@ impl rt::AperDecode for BroadcastSessionReleaseRequest {
             match ie.id {
                 299 => rt::ie::set_once(&mut s_mbs_session_id, 299, ie.decode()?)?,
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -220,7 +396,10 @@ impl rt::AperDecode for BroadcastSessionReleaseRequired {
             match ie.id {
                 299 => rt::ie::set_once(&mut s_mbs_session_id, 299, ie.decode()?)?,
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -301,7 +480,10 @@ impl rt::AperDecode for BroadcastSessionReleaseResponse {
                 299 => rt::ie::set_once(&mut s_mbs_session_id, 299, ie.decode()?)?,
                 358 => rt::ie::set_once(&mut s_mbs_session_release_response_transfer, 358, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -376,7 +558,10 @@ impl rt::AperDecode for BroadcastSessionTransportRequest {
             match ie.id {
                 299 => rt::ie::set_once(&mut s_mbs_session_id, 299, ie.decode()?)?,
                 418 => rt::ie::set_once(&mut s_broadcast_transport_request_transfer, 418, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -458,7 +643,10 @@ impl rt::AperDecode for BroadcastSessionTransportResponse {
                 299 => rt::ie::set_once(&mut s_mbs_session_id, 299, ie.decode()?)?,
                 419 => rt::ie::set_once(&mut s_broadcast_transport_response_transfer, 419, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -550,7 +738,10 @@ impl rt::AperDecode for BroadcastSessionTransportFailure {
                 417 => rt::ie::set_once(&mut s_broadcast_transport_failure_transfer, 417, ie.decode()?)?,
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -634,7 +825,10 @@ impl rt::AperDecode for DistributionSetupRequest {
                 299 => rt::ie::set_once(&mut s_mbs_session_id, 299, ie.decode()?)?,
                 295 => rt::ie::set_once(&mut s_mbs_area_session_id, 295, ie.decode()?)?,
                 301 => rt::ie::set_once(&mut s_mbs_distribution_setup_request_transfer, 301, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -725,7 +919,10 @@ impl rt::AperDecode for DistributionSetupResponse {
                 295 => rt::ie::set_once(&mut s_mbs_area_session_id, 295, ie.decode()?)?,
                 302 => rt::ie::set_once(&mut s_mbs_distribution_setup_response_transfer, 302, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -826,7 +1023,10 @@ impl rt::AperDecode for DistributionSetupFailure {
                 303 => rt::ie::set_once(&mut s_mbs_distribution_setup_unsuccessful_transfer, 303, ie.decode()?)?,
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -920,7 +1120,10 @@ impl rt::AperDecode for DistributionReleaseRequest {
                 295 => rt::ie::set_once(&mut s_mbs_area_session_id, 295, ie.decode()?)?,
                 300 => rt::ie::set_once(&mut s_mbs_distribution_release_request_transfer, 300, ie.decode()?)?,
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1003,7 +1206,10 @@ impl rt::AperDecode for DistributionReleaseResponse {
                 299 => rt::ie::set_once(&mut s_mbs_session_id, 299, ie.decode()?)?,
                 295 => rt::ie::set_once(&mut s_mbs_area_session_id, 295, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1078,7 +1284,10 @@ impl rt::AperDecode for MulticastSessionActivationRequest {
             match ie.id {
                 299 => rt::ie::set_once(&mut s_mbs_session_id, 299, ie.decode()?)?,
                 304 => rt::ie::set_once(&mut s_multicast_session_activation_request_transfer, 304, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1151,7 +1360,10 @@ impl rt::AperDecode for MulticastSessionActivationResponse {
             match ie.id {
                 299 => rt::ie::set_once(&mut s_mbs_session_id, 299, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1233,7 +1445,10 @@ impl rt::AperDecode for MulticastSessionActivationFailure {
                 299 => rt::ie::set_once(&mut s_mbs_session_id, 299, ie.decode()?)?,
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1308,7 +1523,10 @@ impl rt::AperDecode for MulticastSessionDeactivationRequest {
             match ie.id {
                 299 => rt::ie::set_once(&mut s_mbs_session_id, 299, ie.decode()?)?,
                 305 => rt::ie::set_once(&mut s_multicast_session_deactivation_request_transfer, 305, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1381,7 +1599,10 @@ impl rt::AperDecode for MulticastSessionDeactivationResponse {
             match ie.id {
                 299 => rt::ie::set_once(&mut s_mbs_session_id, 299, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1463,7 +1684,10 @@ impl rt::AperDecode for MulticastSessionUpdateRequest {
                 299 => rt::ie::set_once(&mut s_mbs_session_id, 299, ie.decode()?)?,
                 295 => rt::ie::set_once(&mut s_mbs_area_session_id, 295, ie.decode()?)?,
                 306 => rt::ie::set_once(&mut s_multicast_session_update_request_transfer, 306, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1545,7 +1769,10 @@ impl rt::AperDecode for MulticastSessionUpdateResponse {
                 299 => rt::ie::set_once(&mut s_mbs_session_id, 299, ie.decode()?)?,
                 295 => rt::ie::set_once(&mut s_mbs_area_session_id, 295, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1636,7 +1863,10 @@ impl rt::AperDecode for MulticastSessionUpdateFailure {
                 295 => rt::ie::set_once(&mut s_mbs_area_session_id, 295, ie.decode()?)?,
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1720,7 +1950,10 @@ impl rt::AperDecode for MulticastGroupPaging {
                 299 => rt::ie::set_once(&mut s_mbs_session_id, 299, ie.decode()?)?,
                 298 => rt::ie::set_once(&mut s_mbs_service_area, 298, ie.decode()?)?,
                 307 => rt::ie::set_once(&mut s_multicast_group_paging_area_list, 307, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1795,7 +2028,10 @@ impl rt::AperDecode for TimingSynchronisationStatusRequest {
             match ie.id {
                 89 => rt::ie::set_once(&mut s_routing_id, 89, ie.decode()?)?,
                 388 => rt::ie::set_once(&mut s_ran_tss_request_type, 388, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1868,7 +2104,10 @@ impl rt::AperDecode for TimingSynchronisationStatusResponse {
             match ie.id {
                 89 => rt::ie::set_once(&mut s_routing_id, 89, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1950,7 +2189,10 @@ impl rt::AperDecode for TimingSynchronisationStatusFailure {
                 89 => rt::ie::set_once(&mut s_routing_id, 89, ie.decode()?)?,
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -2034,7 +2276,10 @@ impl rt::AperDecode for TimingSynchronisationStatusReport {
                 89 => rt::ie::set_once(&mut s_routing_id, 89, ie.decode()?)?,
                 387 => rt::ie::set_once(&mut s_ran_timing_synchronisation_status_info, 387, ie.decode()?)?,
                 389 => rt::ie::set_once(&mut s_ran_tss_scope, 389, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -2127,7 +2372,10 @@ impl rt::AperDecode for MtCommunicationHandlingRequest {
                 85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
                 406 => rt::ie::set_once(&mut s_five_gc_action, 406, ie.decode()?)?,
                 431 => rt::ie::set_once(&mut s_pdu_session_list_mt_comm_h_req, 431, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -2211,7 +2459,10 @@ impl rt::AperDecode for MtCommunicationHandlingResponse {
                 10 => rt::ie::set_once(&mut s_amf_ue_ngap_id, 10, ie.decode()?)?,
                 85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -2230,191 +2481,6 @@ impl MtCommunicationHandlingResponse {
     /// The ids of the IEs this version of the specification defines for the message, in the order the
     /// specification requires them on the wire.
     pub const IE_IDS: &'static [u32] = &[10, 85, 19];
-
-    /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
-    pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {
-        rt::ie::wire_ie_ids(content, true, rt::Size::range(0, 65535))
-    }
-}
-
-/// ASN.1 `MTCommunicationHandlingFailure` (NGAP-PDU-Contents): the IEs of the message are the fields.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct MtCommunicationHandlingFailure {
-    /// `id-AMF-UE-NGAP-ID` (id 10, Reject, Mandatory)
-    pub amf_ue_ngap_id: AmfUeNgapId,
-    /// `id-RAN-UE-NGAP-ID` (id 85, Reject, Mandatory)
-    pub ran_ue_ngap_id: RanUeNgapId,
-    /// `id-Cause` (id 15, Ignore, Mandatory)
-    pub cause: Cause,
-    /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
-    pub criticality_diagnostics: Option<CriticalityDiagnostics>,
-    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
-    pub unknown_ies: Vec<rt::ie::RawIe>,
-}
-
-impl MtCommunicationHandlingFailure {
-    /// A value with the mandatory IEs given and every optional one absent.
-    pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId, cause: Cause) -> Self {
-        Self {
-            amf_ue_ngap_id,
-            ran_ue_ngap_id,
-            cause,
-            criticality_diagnostics: None,
-            unknown_ies: Vec::new(),
-        }
-    }
-}
-
-impl rt::AperEncode for MtCommunicationHandlingFailure {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        w.write_bit(false); // extension marker: no additions
-        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.amf_ue_ngap_id;
-            ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Reject, x)?);
-        }
-        {
-            let x = &self.ran_ue_ngap_id;
-            ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Reject, x)?);
-        }
-        {
-            let x = &self.cause;
-            ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
-        }
-        if let Some(x) = &self.criticality_diagnostics {
-            ies.push(rt::ie::RawIe::new(19, rt::ie::Criticality::Ignore, x)?);
-        }
-        ies.extend(self.unknown_ies.iter().cloned());
-        rt::ie::write_container(w, rt::Size::range(0, 65535), &ies)
-    }
-}
-
-impl rt::AperDecode for MtCommunicationHandlingFailure {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let extension = r.read_bit()?;
-        let mut s_amf_ue_ngap_id: Option<AmfUeNgapId> = None;
-        let mut s_ran_ue_ngap_id: Option<RanUeNgapId> = None;
-        let mut s_cause: Option<Cause> = None;
-        let mut s_criticality_diagnostics: Option<CriticalityDiagnostics> = None;
-        let mut unknown_ies = Vec::new();
-        for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
-            match ie.id {
-                10 => rt::ie::set_once(&mut s_amf_ue_ngap_id, 10, ie.decode()?)?,
-                85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
-                15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
-                19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
-            }
-        }
-        if extension {
-            r.read_extension_additions()?;
-        }
-        Ok(Self {
-            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Reject)?,
-            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Reject)?,
-            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
-            criticality_diagnostics: s_criticality_diagnostics,
-            unknown_ies,
-        })
-    }
-}
-
-impl MtCommunicationHandlingFailure {
-    /// The ids of the IEs this version of the specification defines for the message, in the order the
-    /// specification requires them on the wire.
-    pub const IE_IDS: &'static [u32] = &[10, 85, 15, 19];
-
-    /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
-    pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {
-        rt::ie::wire_ie_ids(content, true, rt::Size::range(0, 65535))
-    }
-}
-
-/// ASN.1 `RANPagingRequest` (NGAP-PDU-Contents): the IEs of the message are the fields.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RanPagingRequest {
-    /// `id-AMF-UE-NGAP-ID` (id 10, Ignore, Mandatory)
-    pub amf_ue_ngap_id: AmfUeNgapId,
-    /// `id-RAN-UE-NGAP-ID` (id 85, Ignore, Mandatory)
-    pub ran_ue_ngap_id: RanUeNgapId,
-    /// `id-PagingPolicyDifferentiation` (id 407, Ignore, Optional)
-    pub paging_policy_differentiation: Option<PagingPolicyDifferentiation>,
-    /// `id-DL-Signalling` (id 408, Ignore, Optional)
-    pub dl_signalling: Option<DlSignalling>,
-    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
-    pub unknown_ies: Vec<rt::ie::RawIe>,
-}
-
-impl RanPagingRequest {
-    /// A value with the mandatory IEs given and every optional one absent.
-    pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId) -> Self {
-        Self {
-            amf_ue_ngap_id,
-            ran_ue_ngap_id,
-            paging_policy_differentiation: None,
-            dl_signalling: None,
-            unknown_ies: Vec::new(),
-        }
-    }
-}
-
-impl rt::AperEncode for RanPagingRequest {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        w.write_bit(false); // extension marker: no additions
-        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.amf_ue_ngap_id;
-            ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Ignore, x)?);
-        }
-        {
-            let x = &self.ran_ue_ngap_id;
-            ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Ignore, x)?);
-        }
-        if let Some(x) = &self.paging_policy_differentiation {
-            ies.push(rt::ie::RawIe::new(407, rt::ie::Criticality::Ignore, x)?);
-        }
-        if let Some(x) = &self.dl_signalling {
-            ies.push(rt::ie::RawIe::new(408, rt::ie::Criticality::Ignore, x)?);
-        }
-        ies.extend(self.unknown_ies.iter().cloned());
-        rt::ie::write_container(w, rt::Size::range(0, 65535), &ies)
-    }
-}
-
-impl rt::AperDecode for RanPagingRequest {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let extension = r.read_bit()?;
-        let mut s_amf_ue_ngap_id: Option<AmfUeNgapId> = None;
-        let mut s_ran_ue_ngap_id: Option<RanUeNgapId> = None;
-        let mut s_paging_policy_differentiation: Option<PagingPolicyDifferentiation> = None;
-        let mut s_dl_signalling: Option<DlSignalling> = None;
-        let mut unknown_ies = Vec::new();
-        for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
-            match ie.id {
-                10 => rt::ie::set_once(&mut s_amf_ue_ngap_id, 10, ie.decode()?)?,
-                85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
-                407 => rt::ie::set_once(&mut s_paging_policy_differentiation, 407, ie.decode()?)?,
-                408 => rt::ie::set_once(&mut s_dl_signalling, 408, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
-            }
-        }
-        if extension {
-            r.read_extension_additions()?;
-        }
-        Ok(Self {
-            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Ignore)?,
-            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Ignore)?,
-            paging_policy_differentiation: s_paging_policy_differentiation,
-            dl_signalling: s_dl_signalling,
-            unknown_ies,
-        })
-    }
-}
-
-impl RanPagingRequest {
-    /// The ids of the IEs this version of the specification defines for the message, in the order the
-    /// specification requires them on the wire.
-    pub const IE_IDS: &'static [u32] = &[10, 85, 407, 408];
 
     /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
     pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {

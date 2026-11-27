@@ -5,6 +5,210 @@ use ngap_aper as rt;
 use rt::{AperDecode as _, AperEncode as _};
 use crate::*;
 
+/// The extension IEs of `PDUSessionResourceModifyItemModReq-ExtIEs` (NGAP-IEs). IEs not defined here are kept in `unknown_ies`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct PduSessionResourceModifyItemModReqExtIes {
+    /// `id-S-NSSAI` (id 148, Reject, Optional)
+    pub s_nssai: Option<SNssai>,
+    /// `id-PduSessionExpectedUEActivityBehaviour` (id 281, Ignore, Optional)
+    pub pdu_session_expected_ue_activity_behaviour: Option<ExpectedUeActivityBehaviour>,
+    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
+    pub unknown_ies: Vec<rt::ie::RawIe>,
+}
+
+impl PduSessionResourceModifyItemModReqExtIes {
+    /// A value with the mandatory IEs given and every optional one absent.
+    pub fn new() -> Self {
+        Self {
+            s_nssai: None,
+            pdu_session_expected_ue_activity_behaviour: None,
+            unknown_ies: Vec::new(),
+        }
+    }
+}
+
+impl rt::AperEncode for PduSessionResourceModifyItemModReqExtIes {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
+        if let Some(x) = &self.s_nssai {
+            ies.push(rt::ie::RawIe::new(148, rt::ie::Criticality::Reject, x)?);
+        }
+        if let Some(x) = &self.pdu_session_expected_ue_activity_behaviour {
+            ies.push(rt::ie::RawIe::new(281, rt::ie::Criticality::Ignore, x)?);
+        }
+        ies.extend(self.unknown_ies.iter().cloned());
+        rt::ie::write_container(w, rt::Size::range(1, 65535), &ies)
+    }
+}
+
+impl rt::AperDecode for PduSessionResourceModifyItemModReqExtIes {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let mut s_s_nssai: Option<SNssai> = None;
+        let mut s_pdu_session_expected_ue_activity_behaviour: Option<ExpectedUeActivityBehaviour> = None;
+        let mut unknown_ies = Vec::new();
+        for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
+            match ie.id {
+                148 => rt::ie::set_once(&mut s_s_nssai, 148, ie.decode()?)?,
+                281 => rt::ie::set_once(&mut s_pdu_session_expected_ue_activity_behaviour, 281, ie.decode()?)?,
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
+            }
+        }
+        Ok(Self {
+            s_nssai: s_s_nssai,
+            pdu_session_expected_ue_activity_behaviour: s_pdu_session_expected_ue_activity_behaviour,
+            unknown_ies,
+        })
+    }
+}
+
+/// ASN.1 `PDUSessionResourceModifyItemModReq` (NGAP-IEs).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PduSessionResourceModifyItemModReq {
+    /// `pDUSessionID`
+    pub pdu_session_id: PduSessionId,
+    /// `nAS-PDU`
+    pub nas_pdu: Option<NasPdu>,
+    /// `pDUSessionResourceModifyRequestTransfer`
+    pub pdu_session_resource_modify_request_transfer: rt::Contained<PduSessionResourceModifyRequestTransfer>,
+    /// `iE-Extensions`
+    pub ie_extensions: Option<PduSessionResourceModifyItemModReqExtIes>,
+}
+
+impl PduSessionResourceModifyItemModReq {
+    /// A value with the mandatory components given and every optional one absent.
+    pub fn new(pdu_session_id: PduSessionId, pdu_session_resource_modify_request_transfer: rt::Contained<PduSessionResourceModifyRequestTransfer>) -> Self {
+        Self {
+            pdu_session_id,
+            nas_pdu: None,
+            pdu_session_resource_modify_request_transfer,
+            ie_extensions: None,
+        }
+    }
+}
+
+impl rt::AperEncode for PduSessionResourceModifyItemModReq {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        w.write_bit(false); // extension marker: no additions
+        w.write_bit(self.nas_pdu.is_some());
+        w.write_bit(self.ie_extensions.is_some());
+        {
+            let x = &self.pdu_session_id;
+            x.aper_encode(w)?;
+        }
+        if let Some(x) = &self.nas_pdu {
+            x.aper_encode(w)?;
+        }
+        {
+            let x = &self.pdu_session_resource_modify_request_transfer;
+            x.aper_encode(w)?;
+        }
+        if let Some(x) = &self.ie_extensions {
+            x.aper_encode(w)?;
+        }
+        Ok(())
+    }
+}
+
+impl rt::AperDecode for PduSessionResourceModifyItemModReq {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let extension = r.read_bit()?;
+        let p_nas_pdu = r.read_bit()?;
+        let p_ie_extensions = r.read_bit()?;
+        let v_pdu_session_id = <PduSessionId>::aper_decode(r)?;
+        let v_nas_pdu = if p_nas_pdu { Some(<NasPdu>::aper_decode(r)?) } else { None };
+        let v_pdu_session_resource_modify_request_transfer = <rt::Contained<PduSessionResourceModifyRequestTransfer>>::aper_decode(r)?;
+        let v_ie_extensions = if p_ie_extensions { Some(<PduSessionResourceModifyItemModReqExtIes>::aper_decode(r)?) } else { None };
+        if extension {
+            r.read_extension_additions()?;
+        }
+        Ok(Self {
+            pdu_session_id: v_pdu_session_id,
+            nas_pdu: v_nas_pdu,
+            pdu_session_resource_modify_request_transfer: v_pdu_session_resource_modify_request_transfer,
+            ie_extensions: v_ie_extensions,
+        })
+    }
+}
+
+/// ASN.1 `PDUSessionResourceModifyListModRes` (NGAP-IEs).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PduSessionResourceModifyListModRes(pub Vec<PduSessionResourceModifyItemModRes>);
+
+impl rt::AperEncode for PduSessionResourceModifyListModRes {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        let x = &self.0;
+        w.write_seq_of(x, rt::Size::range(1, 256), |w, x| x.aper_encode(w))
+    }
+}
+
+impl rt::AperDecode for PduSessionResourceModifyListModRes {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        Ok(Self(r.read_seq_of(rt::Size::range(1, 256), |r| <PduSessionResourceModifyItemModRes>::aper_decode(r))?))
+    }
+}
+
+/// ASN.1 `PDUSessionResourceModifyItemModRes` (NGAP-IEs).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PduSessionResourceModifyItemModRes {
+    /// `pDUSessionID`
+    pub pdu_session_id: PduSessionId,
+    /// `pDUSessionResourceModifyResponseTransfer`
+    pub pdu_session_resource_modify_response_transfer: rt::Contained<PduSessionResourceModifyResponseTransfer>,
+    /// `iE-Extensions`
+    pub ie_extensions: Option<rt::ie::UnknownIes>,
+}
+
+impl PduSessionResourceModifyItemModRes {
+    /// A value with the mandatory components given and every optional one absent.
+    pub fn new(pdu_session_id: PduSessionId, pdu_session_resource_modify_response_transfer: rt::Contained<PduSessionResourceModifyResponseTransfer>) -> Self {
+        Self {
+            pdu_session_id,
+            pdu_session_resource_modify_response_transfer,
+            ie_extensions: None,
+        }
+    }
+}
+
+impl rt::AperEncode for PduSessionResourceModifyItemModRes {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        w.write_bit(false); // extension marker: no additions
+        w.write_bit(self.ie_extensions.is_some());
+        {
+            let x = &self.pdu_session_id;
+            x.aper_encode(w)?;
+        }
+        {
+            let x = &self.pdu_session_resource_modify_response_transfer;
+            x.aper_encode(w)?;
+        }
+        if let Some(x) = &self.ie_extensions {
+            rt::ie::write_container(w, rt::Size::range(1, 65535), &x.ies)?;
+        }
+        Ok(())
+    }
+}
+
+impl rt::AperDecode for PduSessionResourceModifyItemModRes {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let extension = r.read_bit()?;
+        let p_ie_extensions = r.read_bit()?;
+        let v_pdu_session_id = <PduSessionId>::aper_decode(r)?;
+        let v_pdu_session_resource_modify_response_transfer = <rt::Contained<PduSessionResourceModifyResponseTransfer>>::aper_decode(r)?;
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
+        if extension {
+            r.read_extension_additions()?;
+        }
+        Ok(Self {
+            pdu_session_id: v_pdu_session_id,
+            pdu_session_resource_modify_response_transfer: v_pdu_session_resource_modify_response_transfer,
+            ie_extensions: v_ie_extensions,
+        })
+    }
+}
+
 /// ASN.1 `PDUSessionResourceModifyUnsuccessfulTransfer` (NGAP-IEs).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PduSessionResourceModifyUnsuccessfulTransfer {
@@ -53,7 +257,7 @@ impl rt::AperDecode for PduSessionResourceModifyUnsuccessfulTransfer {
         let p_ie_extensions = r.read_bit()?;
         let v_cause = <Cause>::aper_decode(r)?;
         let v_criticality_diagnostics = if p_criticality_diagnostics { Some(<CriticalityDiagnostics>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -129,7 +333,7 @@ impl rt::AperDecode for PduSessionResourceNotifyItem {
         let p_ie_extensions = r.read_bit()?;
         let v_pdu_session_id = <PduSessionId>::aper_decode(r)?;
         let v_pdu_session_resource_notify_transfer = <rt::Contained<PduSessionResourceNotifyTransfer>>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -186,7 +390,10 @@ impl rt::AperDecode for PduSessionResourceNotifyReleasedTransferExtIes {
             match ie.id {
                 144 => rt::ie::set_once(&mut s_secondary_rat_usage_information, 144, ie.decode()?)?,
                 429 => rt::ie::set_once(&mut s_user_plane_error_indicator, 429, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -318,7 +525,10 @@ impl rt::AperDecode for PduSessionResourceNotifyTransferExtIes {
             match ie.id {
                 144 => rt::ie::set_once(&mut s_secondary_rat_usage_information, 144, ie.decode()?)?,
                 278 => rt::ie::set_once(&mut s_qos_flow_feedback_list, 278, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -427,7 +637,10 @@ impl rt::AperDecode for PduSessionResourceReleaseCommandTransferExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 397 => rt::ie::set_once(&mut s_qos_flow_additional_info_list, 397, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -551,7 +764,7 @@ impl rt::AperDecode for PduSessionResourceReleasedItemNot {
         let p_ie_extensions = r.read_bit()?;
         let v_pdu_session_id = <PduSessionId>::aper_decode(r)?;
         let v_pdu_session_resource_notify_released_transfer = <rt::Contained<PduSessionResourceNotifyReleasedTransfer>>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -627,7 +840,7 @@ impl rt::AperDecode for PduSessionResourceReleasedItemPsAck {
         let p_ie_extensions = r.read_bit()?;
         let v_pdu_session_id = <PduSessionId>::aper_decode(r)?;
         let v_path_switch_request_unsuccessful_transfer = <rt::Contained<PathSwitchRequestUnsuccessfulTransfer>>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -703,7 +916,7 @@ impl rt::AperDecode for PduSessionResourceReleasedItemPsFail {
         let p_ie_extensions = r.read_bit()?;
         let v_pdu_session_id = <PduSessionId>::aper_decode(r)?;
         let v_path_switch_request_unsuccessful_transfer = <rt::Contained<PathSwitchRequestUnsuccessfulTransfer>>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -779,7 +992,7 @@ impl rt::AperDecode for PduSessionResourceReleasedItemRelRes {
         let p_ie_extensions = r.read_bit()?;
         let v_pdu_session_id = <PduSessionId>::aper_decode(r)?;
         let v_pdu_session_resource_release_response_transfer = <rt::Contained<PduSessionResourceReleaseResponseTransfer>>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -836,7 +1049,10 @@ impl rt::AperDecode for PduSessionResourceReleaseResponseTransferExtIes {
             match ie.id {
                 144 => rt::ie::set_once(&mut s_secondary_rat_usage_information, 144, ie.decode()?)?,
                 397 => rt::ie::set_once(&mut s_qos_flow_additional_info_list, 397, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -952,7 +1168,7 @@ impl rt::AperDecode for PduSessionResourceResumeItemResReq {
         let p_ie_extensions = r.read_bit()?;
         let v_pdu_session_id = <PduSessionId>::aper_decode(r)?;
         let v_ue_context_resume_request_transfer = <rt::Contained<UeContextResumeRequestTransfer>>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1028,7 +1244,7 @@ impl rt::AperDecode for PduSessionResourceResumeItemResRes {
         let p_ie_extensions = r.read_bit()?;
         let v_pdu_session_id = <PduSessionId>::aper_decode(r)?;
         let v_ue_context_resume_response_transfer = <rt::Contained<UeContextResumeResponseTransfer>>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1104,7 +1320,7 @@ impl rt::AperDecode for PduSessionResourceSecondaryRatUsageItem {
         let p_ie_extensions = r.read_bit()?;
         let v_pdu_session_id = <PduSessionId>::aper_decode(r)?;
         let v_secondary_rat_data_usage_report_transfer = <rt::Contained<SecondaryRatDataUsageReportTransfer>>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1170,7 +1386,10 @@ impl rt::AperDecode for PduSessionResourceSetupItemCxtReqExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 281 => rt::ie::set_once(&mut s_pdu_session_expected_ue_activity_behaviour, 281, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -1322,7 +1541,7 @@ impl rt::AperDecode for PduSessionResourceSetupItemCxtRes {
         let p_ie_extensions = r.read_bit()?;
         let v_pdu_session_id = <PduSessionId>::aper_decode(r)?;
         let v_pdu_session_resource_setup_response_transfer = <rt::Contained<PduSessionResourceSetupResponseTransfer>>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1388,7 +1607,10 @@ impl rt::AperDecode for PduSessionResourceSetupItemHoReqExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 281 => rt::ie::set_once(&mut s_pdu_session_expected_ue_activity_behaviour, 281, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -1520,7 +1742,10 @@ impl rt::AperDecode for PduSessionResourceSetupItemSuReqExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 281 => rt::ie::set_once(&mut s_pdu_session_expected_ue_activity_behaviour, 281, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -1672,7 +1897,7 @@ impl rt::AperDecode for PduSessionResourceSetupItemSuRes {
         let p_ie_extensions = r.read_bit()?;
         let v_pdu_session_id = <PduSessionId>::aper_decode(r)?;
         let v_pdu_session_resource_setup_response_transfer = <rt::Contained<PduSessionResourceSetupResponseTransfer>>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1846,7 +2071,10 @@ impl rt::AperDecode for PduSessionResourceSetupRequestTransfer {
                 197 => rt::ie::set_once(&mut s_redundant_pdu_session_information, 197, ie.decode()?)?,
                 318 => rt::ie::set_once(&mut s_mbs_session_setup_request_list, 318, ie.decode()?)?,
                 394 => rt::ie::set_once(&mut s_downlink_tl_container, 394, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -2002,7 +2230,10 @@ impl rt::AperDecode for PduSessionResourceSetupResponseTransferExtIes {
                 395 => rt::ie::set_once(&mut s_uplink_tl_container, 395, ie.decode()?)?,
                 426 => rt::ie::set_once(&mut s_ecn_markingor_congestion_information_reporting_status, 426, ie.decode()?)?,
                 423 => rt::ie::set_once(&mut s_pdu_setbased_handling_indicator, 423, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -2150,7 +2381,7 @@ impl rt::AperDecode for PduSessionResourceSetupUnsuccessfulTransfer {
         let p_ie_extensions = r.read_bit()?;
         let v_cause = <Cause>::aper_decode(r)?;
         let v_criticality_diagnostics = if p_criticality_diagnostics { Some(<CriticalityDiagnostics>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -2226,7 +2457,7 @@ impl rt::AperDecode for PduSessionResourceSuspendItemSusReq {
         let p_ie_extensions = r.read_bit()?;
         let v_pdu_session_id = <PduSessionId>::aper_decode(r)?;
         let v_ue_context_suspend_request_transfer = <rt::Contained<UeContextSuspendRequestTransfer>>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -2252,204 +2483,5 @@ impl rt::AperEncode for PduSessionResourceSwitchedList {
 impl rt::AperDecode for PduSessionResourceSwitchedList {
     fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
         Ok(Self(r.read_seq_of(rt::Size::range(1, 256), |r| <PduSessionResourceSwitchedItem>::aper_decode(r))?))
-    }
-}
-
-/// The extension IEs of `PDUSessionResourceSwitchedItem-ExtIEs` (NGAP-IEs). IEs not defined here are kept in `unknown_ies`.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct PduSessionResourceSwitchedItemExtIes {
-    /// `id-PduSessionExpectedUEActivityBehaviour` (id 281, Ignore, Optional)
-    pub pdu_session_expected_ue_activity_behaviour: Option<ExpectedUeActivityBehaviour>,
-    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
-    pub unknown_ies: Vec<rt::ie::RawIe>,
-}
-
-impl PduSessionResourceSwitchedItemExtIes {
-    /// A value with the mandatory IEs given and every optional one absent.
-    pub fn new() -> Self {
-        Self {
-            pdu_session_expected_ue_activity_behaviour: None,
-            unknown_ies: Vec::new(),
-        }
-    }
-}
-
-impl rt::AperEncode for PduSessionResourceSwitchedItemExtIes {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        if let Some(x) = &self.pdu_session_expected_ue_activity_behaviour {
-            ies.push(rt::ie::RawIe::new(281, rt::ie::Criticality::Ignore, x)?);
-        }
-        ies.extend(self.unknown_ies.iter().cloned());
-        rt::ie::write_container(w, rt::Size::range(1, 65535), &ies)
-    }
-}
-
-impl rt::AperDecode for PduSessionResourceSwitchedItemExtIes {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let mut s_pdu_session_expected_ue_activity_behaviour: Option<ExpectedUeActivityBehaviour> = None;
-        let mut unknown_ies = Vec::new();
-        for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
-            match ie.id {
-                281 => rt::ie::set_once(&mut s_pdu_session_expected_ue_activity_behaviour, 281, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
-            }
-        }
-        Ok(Self {
-            pdu_session_expected_ue_activity_behaviour: s_pdu_session_expected_ue_activity_behaviour,
-            unknown_ies,
-        })
-    }
-}
-
-/// ASN.1 `PDUSessionResourceSwitchedItem` (NGAP-IEs).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PduSessionResourceSwitchedItem {
-    /// `pDUSessionID`
-    pub pdu_session_id: PduSessionId,
-    /// `pathSwitchRequestAcknowledgeTransfer`
-    pub path_switch_request_acknowledge_transfer: rt::Contained<PathSwitchRequestAcknowledgeTransfer>,
-    /// `iE-Extensions`
-    pub ie_extensions: Option<PduSessionResourceSwitchedItemExtIes>,
-}
-
-impl PduSessionResourceSwitchedItem {
-    /// A value with the mandatory components given and every optional one absent.
-    pub fn new(pdu_session_id: PduSessionId, path_switch_request_acknowledge_transfer: rt::Contained<PathSwitchRequestAcknowledgeTransfer>) -> Self {
-        Self {
-            pdu_session_id,
-            path_switch_request_acknowledge_transfer,
-            ie_extensions: None,
-        }
-    }
-}
-
-impl rt::AperEncode for PduSessionResourceSwitchedItem {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        w.write_bit(false); // extension marker: no additions
-        w.write_bit(self.ie_extensions.is_some());
-        {
-            let x = &self.pdu_session_id;
-            x.aper_encode(w)?;
-        }
-        {
-            let x = &self.path_switch_request_acknowledge_transfer;
-            x.aper_encode(w)?;
-        }
-        if let Some(x) = &self.ie_extensions {
-            x.aper_encode(w)?;
-        }
-        Ok(())
-    }
-}
-
-impl rt::AperDecode for PduSessionResourceSwitchedItem {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let extension = r.read_bit()?;
-        let p_ie_extensions = r.read_bit()?;
-        let v_pdu_session_id = <PduSessionId>::aper_decode(r)?;
-        let v_path_switch_request_acknowledge_transfer = <rt::Contained<PathSwitchRequestAcknowledgeTransfer>>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(<PduSessionResourceSwitchedItemExtIes>::aper_decode(r)?) } else { None };
-        if extension {
-            r.read_extension_additions()?;
-        }
-        Ok(Self {
-            pdu_session_id: v_pdu_session_id,
-            path_switch_request_acknowledge_transfer: v_path_switch_request_acknowledge_transfer,
-            ie_extensions: v_ie_extensions,
-        })
-    }
-}
-
-/// ASN.1 `PDUSessionResourceToBeSwitchedDLList` (NGAP-IEs).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PduSessionResourceToBeSwitchedDlList(pub Vec<PduSessionResourceToBeSwitchedDlItem>);
-
-impl rt::AperEncode for PduSessionResourceToBeSwitchedDlList {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        let x = &self.0;
-        w.write_seq_of(x, rt::Size::range(1, 256), |w, x| x.aper_encode(w))
-    }
-}
-
-impl rt::AperDecode for PduSessionResourceToBeSwitchedDlList {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        Ok(Self(r.read_seq_of(rt::Size::range(1, 256), |r| <PduSessionResourceToBeSwitchedDlItem>::aper_decode(r))?))
-    }
-}
-
-/// ASN.1 `PDUSessionResourceToBeSwitchedDLItem` (NGAP-IEs).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PduSessionResourceToBeSwitchedDlItem {
-    /// `pDUSessionID`
-    pub pdu_session_id: PduSessionId,
-    /// `pathSwitchRequestTransfer`
-    pub path_switch_request_transfer: rt::Contained<PathSwitchRequestTransfer>,
-    /// `iE-Extensions`
-    pub ie_extensions: Option<rt::ie::UnknownIes>,
-}
-
-impl PduSessionResourceToBeSwitchedDlItem {
-    /// A value with the mandatory components given and every optional one absent.
-    pub fn new(pdu_session_id: PduSessionId, path_switch_request_transfer: rt::Contained<PathSwitchRequestTransfer>) -> Self {
-        Self {
-            pdu_session_id,
-            path_switch_request_transfer,
-            ie_extensions: None,
-        }
-    }
-}
-
-impl rt::AperEncode for PduSessionResourceToBeSwitchedDlItem {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        w.write_bit(false); // extension marker: no additions
-        w.write_bit(self.ie_extensions.is_some());
-        {
-            let x = &self.pdu_session_id;
-            x.aper_encode(w)?;
-        }
-        {
-            let x = &self.path_switch_request_transfer;
-            x.aper_encode(w)?;
-        }
-        if let Some(x) = &self.ie_extensions {
-            rt::ie::write_container(w, rt::Size::range(1, 65535), &x.ies)?;
-        }
-        Ok(())
-    }
-}
-
-impl rt::AperDecode for PduSessionResourceToBeSwitchedDlItem {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let extension = r.read_bit()?;
-        let p_ie_extensions = r.read_bit()?;
-        let v_pdu_session_id = <PduSessionId>::aper_decode(r)?;
-        let v_path_switch_request_transfer = <rt::Contained<PathSwitchRequestTransfer>>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
-        if extension {
-            r.read_extension_additions()?;
-        }
-        Ok(Self {
-            pdu_session_id: v_pdu_session_id,
-            path_switch_request_transfer: v_path_switch_request_transfer,
-            ie_extensions: v_ie_extensions,
-        })
-    }
-}
-
-/// ASN.1 `PDUSessionResourceToReleaseListHOCmd` (NGAP-IEs).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PduSessionResourceToReleaseListHoCmd(pub Vec<PduSessionResourceToReleaseItemHoCmd>);
-
-impl rt::AperEncode for PduSessionResourceToReleaseListHoCmd {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        let x = &self.0;
-        w.write_seq_of(x, rt::Size::range(1, 256), |w, x| x.aper_encode(w))
-    }
-}
-
-impl rt::AperDecode for PduSessionResourceToReleaseListHoCmd {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        Ok(Self(r.read_seq_of(rt::Size::range(1, 256), |r| <PduSessionResourceToReleaseItemHoCmd>::aper_decode(r))?))
     }
 }

@@ -109,7 +109,9 @@ impl RTy {
             RTy::Null => "Ok(())".into(),
             RTy::List(e, sz) => format!("r.read_seq_of({sz}, |r| {})", e.dec()),
             RTy::UnknownExt(sz) => {
-                format!("rt::ie::read_container(r, {sz}).map(|ies| rt::ie::UnknownIes {{ ies }})")
+                format!(
+                    "rt::ie::read_container(r, {sz}).map(|ies| {{ ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes {{ ies }} }})"
+                )
             }
         }
     }
@@ -936,7 +938,7 @@ impl rt::AperDecode for PrivateIe {
             None => String::new(),
         };
         let mut code = tpl(
-            "@INTRO@@DERIVE@pub struct @N@ {\n@DECL@    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).\n    pub unknown_ies: Vec<rt::ie::RawIe>,\n}\n\n@CTORFN@impl rt::AperEncode for @N@ {\n    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {\n@PREENC@        let mut ies: Vec<rt::ie::RawIe> = Vec::new();\n@ENC@        ies.extend(self.unknown_ies.iter().cloned());\n        rt::ie::write_container(w, @SIZE@, &ies)\n    }\n}\n\nimpl rt::AperDecode for @N@ {\n    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {\n@PREDEC@@SLOTS@        let mut unknown_ies = Vec::new();\n        for ie in rt::ie::read_container(r, @SIZE@)? {\n            match ie.id {\n@ARMS@                _ => unknown_ies.push(ie),\n            }\n        }\n@POSTDEC@        Ok(Self {\n@BUILD@            unknown_ies,\n        })\n    }\n}\n",
+            "@INTRO@@DERIVE@pub struct @N@ {\n@DECL@    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).\n    pub unknown_ies: Vec<rt::ie::RawIe>,\n}\n\n@CTORFN@impl rt::AperEncode for @N@ {\n    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {\n@PREENC@        let mut ies: Vec<rt::ie::RawIe> = Vec::new();\n@ENC@        ies.extend(self.unknown_ies.iter().cloned());\n        rt::ie::write_container(w, @SIZE@, &ies)\n    }\n}\n\nimpl rt::AperDecode for @N@ {\n    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {\n@PREDEC@@SLOTS@        let mut unknown_ies = Vec::new();\n        for ie in rt::ie::read_container(r, @SIZE@)? {\n            match ie.id {\n@ARMS@                _ => {\n                    rt::ie::note_unknown(&ie);\n                    unknown_ies.push(ie)\n                }\n            }\n        }\n@POSTDEC@        Ok(Self {\n@BUILD@            unknown_ies,\n        })\n    }\n}\n",
             &[
                 ("INTRO", &intro),
                 ("DERIVE", derive),
@@ -1010,7 +1012,7 @@ impl rt::AperDecode for PrivateIe {
             let _ = writeln!(dec, "            {} => Self::{variant}({value}),", row.id);
         }
         Ok(tpl(
-            "/// The single IE field `@SET@` (@MOD@): one of the defined IEs, or an unknown one as received.\n#[derive(Debug, Clone, PartialEq, Eq)]\npub enum @N@ {\n@DECL@    /// An IE this version of the specification does not define here.\n    Unknown(rt::ie::RawIe),\n}\n\nimpl rt::AperEncode for @N@ {\n    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {\n        match self {\n@ENC@            Self::Unknown(ie) => ie.aper_encode(w),\n        }\n    }\n}\n\nimpl rt::AperDecode for @N@ {\n    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {\n        let ie = <rt::ie::RawIe>::aper_decode(r)?;\n        Ok(match ie.id {\n@DEC@            _ => Self::Unknown(ie),\n        })\n    }\n}\n",
+            "/// The single IE field `@SET@` (@MOD@): one of the defined IEs, or an unknown one as received.\n#[derive(Debug, Clone, PartialEq, Eq)]\npub enum @N@ {\n@DECL@    /// An IE this version of the specification does not define here.\n    Unknown(rt::ie::RawIe),\n}\n\nimpl rt::AperEncode for @N@ {\n    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {\n        match self {\n@ENC@            Self::Unknown(ie) => ie.aper_encode(w),\n        }\n    }\n}\n\nimpl rt::AperDecode for @N@ {\n    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {\n        let ie = <rt::ie::RawIe>::aper_decode(r)?;\n        Ok(match ie.id {\n@DEC@            _ => {\n                rt::ie::note_unknown(&ie);\n                Self::Unknown(ie)\n            }\n        })\n    }\n}\n",
             &[
                 ("SET", &set.name),
                 ("MOD", &self.group),

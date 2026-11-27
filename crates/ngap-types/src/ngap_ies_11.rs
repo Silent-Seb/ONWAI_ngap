@@ -5,6 +5,65 @@ use ngap_aper as rt;
 use rt::{AperDecode as _, AperEncode as _};
 use crate::*;
 
+/// ASN.1 `M7Configuration` (NGAP-IEs).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct M7Configuration {
+    /// `m7period`
+    pub m7period: M7period,
+    /// `m7-links-to-log`
+    pub m7_links_to_log: LinksToLog,
+    /// `iE-Extensions`
+    pub ie_extensions: Option<M7ConfigurationExtIes>,
+}
+
+impl M7Configuration {
+    /// A value with the mandatory components given and every optional one absent.
+    pub fn new(m7period: M7period, m7_links_to_log: LinksToLog) -> Self {
+        Self {
+            m7period,
+            m7_links_to_log,
+            ie_extensions: None,
+        }
+    }
+}
+
+impl rt::AperEncode for M7Configuration {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        w.write_bit(false); // extension marker: no additions
+        w.write_bit(self.ie_extensions.is_some());
+        {
+            let x = &self.m7period;
+            x.aper_encode(w)?;
+        }
+        {
+            let x = &self.m7_links_to_log;
+            x.aper_encode(w)?;
+        }
+        if let Some(x) = &self.ie_extensions {
+            x.aper_encode(w)?;
+        }
+        Ok(())
+    }
+}
+
+impl rt::AperDecode for M7Configuration {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let extension = r.read_bit()?;
+        let p_ie_extensions = r.read_bit()?;
+        let v_m7period = <M7period>::aper_decode(r)?;
+        let v_m7_links_to_log = <LinksToLog>::aper_decode(r)?;
+        let v_ie_extensions = if p_ie_extensions { Some(<M7ConfigurationExtIes>::aper_decode(r)?) } else { None };
+        if extension {
+            r.read_extension_additions()?;
+        }
+        Ok(Self {
+            m7period: v_m7period,
+            m7_links_to_log: v_m7_links_to_log,
+            ie_extensions: v_ie_extensions,
+        })
+    }
+}
+
 /// ASN.1 `M7ReportAmountMDT` (NGAP-IEs).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -122,7 +181,7 @@ impl rt::AperDecode for MdtCircle {
         let p_ie_extensions = r.read_bit()?;
         let v_reference_location = r.read_octet_string(rt::Size::UNBOUNDED)?;
         let v_distance_radius = r.read_int_as::<u16>(&rt::IntSpec::range(1, 65535))?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -173,7 +232,7 @@ impl rt::AperDecode for MdtLocationInfo {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_mdt_location_information = <MdtLocationInformation>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -316,7 +375,7 @@ impl rt::AperDecode for N6JitterInformation {
         let p_ie_extensions = r.read_bit()?;
         let v_n6_jitter_lower_bound = r.read_int_as::<i8>(&rt::IntSpec::range(-127, 127))?;
         let v_n6_jitter_upper_bound = r.read_int_as::<i8>(&rt::IntSpec::range(-127, 127))?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -658,7 +717,7 @@ impl rt::AperDecode for NbIotPagingEdrxInfo {
         let p_ie_extensions = r.read_bit()?;
         let v_nb_iot_paging_edrx_cycle = <NbIotPagingEdrxCycle>::aper_decode(r)?;
         let v_nb_iot_paging_time_window = if p_nb_iot_paging_time_window { Some(<NbIotPagingTimeWindow>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -796,7 +855,7 @@ impl rt::AperDecode for NetworkSliceItemforMdt {
         let p_ie_extensions = r.read_bit()?;
         let v_plmn_id = <PlmnIdentity>::aper_decode(r)?;
         let v_slice_mdt_list = <SliceMdtList>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -847,7 +906,7 @@ impl rt::AperDecode for NetworkSliceAreaScopeofMdt {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_network_slice_listfor_mdt = <NetworkSliceListforMdt>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -914,7 +973,7 @@ impl rt::AperDecode for SliceMdtItem {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_snssai = <SNssai>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1053,7 +1112,7 @@ impl rt::AperDecode for NgapieSupportInformationRequestItem {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_ngap_protocol_ie_id = <ProtocolIeId>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1196,7 +1255,7 @@ impl rt::AperDecode for NgapieSupportInformationResponseItem {
         let v_ngap_protocol_ie_id = <ProtocolIeId>::aper_decode(r)?;
         let v_ngap_protocol_ie_support_info = <NgapieSupportInformationResponseItemNgapProtocolIeSupportInfo>::aper_decode(r)?;
         let v_ngap_protocol_ie_presence_info = <NgapieSupportInformationResponseItemNgapProtocolIePresenceInfo>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1387,7 +1446,7 @@ impl rt::AperDecode for NgranTnlAssociationToRemoveItem {
         let p_ie_extensions = r.read_bit()?;
         let v_tnl_association_transport_layer_address = <CpTransportLayerInformation>::aper_decode(r)?;
         let v_tnl_association_transport_layer_address_amf = if p_tnl_association_transport_layer_address_amf { Some(<CpTransportLayerInformation>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         Ok(Self {
             tnl_association_transport_layer_address: v_tnl_association_transport_layer_address,
             tnl_association_transport_layer_address_amf: v_tnl_association_transport_layer_address_amf,
@@ -1475,7 +1534,10 @@ impl rt::AperDecode for NonDynamic5QiDescriptorExtIes {
             match ie.id {
                 187 => rt::ie::set_once(&mut s_cn_packet_delay_budget_dl, 187, ie.decode()?)?,
                 188 => rt::ie::set_once(&mut s_cn_packet_delay_budget_ul, 188, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -1880,7 +1942,7 @@ impl rt::AperDecode for NrCgi {
         let p_ie_extensions = r.read_bit()?;
         let v_plmn_identity = <PlmnIdentity>::aper_decode(r)?;
         let v_nr_cell_identity = <NrCellIdentity>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1974,7 +2036,7 @@ impl rt::AperDecode for NrPagingeDrxInformation {
         let p_ie_extensions = r.read_bit()?;
         let v_nr_paging_edrx_cycle = <NrPagingEdrxCycle>::aper_decode(r)?;
         let v_nr_paging_time_window = if p_nr_paging_time_window { Some(<NrPagingTimeWindow>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -2107,7 +2169,7 @@ impl rt::AperDecode for NrPagingLongEdrxInformationForRrcInactive {
         let p_ie_extensions = r.read_bit()?;
         let v_nr_paging_long_edrx_cycle_for_rrc_inactive = <NrPagingLongEdrxCycleForRrcInactive>::aper_decode(r)?;
         let v_nr_paging_time_window_for_rrc_inactive = <NrPagingTimeWindowForRrcInactive>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -2328,172 +2390,5 @@ impl rt::AperDecode for NrPagingTimeWindow {
             31 => Self::S32,
             i => return Err(r.error(rt::ErrorKind::InvalidIndex(i))),
         })
-    }
-}
-
-/// ASN.1 `NR-Paging-Time-Window-for-RRC-INACTIVE` (NGAP-IEs).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[non_exhaustive]
-pub enum NrPagingTimeWindowForRrcInactive {
-    /// `s1`
-    S1,
-    /// `s2`
-    S2,
-    /// `s3`
-    S3,
-    /// `s4`
-    S4,
-    /// `s5`
-    S5,
-    /// `s6`
-    S6,
-    /// `s7`
-    S7,
-    /// `s8`
-    S8,
-    /// `s9`
-    S9,
-    /// `s10`
-    S10,
-    /// `s11`
-    S11,
-    /// `s12`
-    S12,
-    /// `s13`
-    S13,
-    /// `s14`
-    S14,
-    /// `s15`
-    S15,
-    /// `s16`
-    S16,
-    /// `s17`
-    S17,
-    /// `s18`
-    S18,
-    /// `s19`
-    S19,
-    /// `s20`
-    S20,
-    /// `s21`
-    S21,
-    /// `s22`
-    S22,
-    /// `s23`
-    S23,
-    /// `s24`
-    S24,
-    /// `s25`
-    S25,
-    /// `s26`
-    S26,
-    /// `s27`
-    S27,
-    /// `s28`
-    S28,
-    /// `s29`
-    S29,
-    /// `s30`
-    S30,
-    /// `s31`
-    S31,
-    /// `s32`
-    S32,
-}
-
-impl rt::AperEncode for NrPagingTimeWindowForRrcInactive {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        let index: u64 = match self {
-            Self::S1 => 0,
-            Self::S2 => 1,
-            Self::S3 => 2,
-            Self::S4 => 3,
-            Self::S5 => 4,
-            Self::S6 => 5,
-            Self::S7 => 6,
-            Self::S8 => 7,
-            Self::S9 => 8,
-            Self::S10 => 9,
-            Self::S11 => 10,
-            Self::S12 => 11,
-            Self::S13 => 12,
-            Self::S14 => 13,
-            Self::S15 => 14,
-            Self::S16 => 15,
-            Self::S17 => 16,
-            Self::S18 => 17,
-            Self::S19 => 18,
-            Self::S20 => 19,
-            Self::S21 => 20,
-            Self::S22 => 21,
-            Self::S23 => 22,
-            Self::S24 => 23,
-            Self::S25 => 24,
-            Self::S26 => 25,
-            Self::S27 => 26,
-            Self::S28 => 27,
-            Self::S29 => 28,
-            Self::S30 => 29,
-            Self::S31 => 30,
-            Self::S32 => 31,
-        };
-        w.write_index(index, 32, true)
-    }
-}
-
-impl rt::AperDecode for NrPagingTimeWindowForRrcInactive {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        Ok(match r.read_index(32, true)? {
-            0 => Self::S1,
-            1 => Self::S2,
-            2 => Self::S3,
-            3 => Self::S4,
-            4 => Self::S5,
-            5 => Self::S6,
-            6 => Self::S7,
-            7 => Self::S8,
-            8 => Self::S9,
-            9 => Self::S10,
-            10 => Self::S11,
-            11 => Self::S12,
-            12 => Self::S13,
-            13 => Self::S14,
-            14 => Self::S15,
-            15 => Self::S16,
-            16 => Self::S17,
-            17 => Self::S18,
-            18 => Self::S19,
-            19 => Self::S20,
-            20 => Self::S21,
-            21 => Self::S22,
-            22 => Self::S23,
-            23 => Self::S24,
-            24 => Self::S25,
-            25 => Self::S26,
-            26 => Self::S27,
-            27 => Self::S28,
-            28 => Self::S29,
-            29 => Self::S30,
-            30 => Self::S31,
-            31 => Self::S32,
-            i => return Err(r.error(rt::ErrorKind::InvalidIndex(i))),
-        })
-    }
-}
-
-/// ASN.1 `NRencryptionAlgorithms` (NGAP-IEs).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct NRencryptionAlgorithms(pub rt::BitString);
-
-impl rt::AperEncode for NRencryptionAlgorithms {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        let x = &self.0;
-        w.write_bit_string(x, rt::Size::fixed(16).extensible())
-    }
-}
-
-impl rt::AperDecode for NRencryptionAlgorithms {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        Ok(Self(r.read_bit_string(rt::Size::fixed(16).extensible())?))
     }
 }

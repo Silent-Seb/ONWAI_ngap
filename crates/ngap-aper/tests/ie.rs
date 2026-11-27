@@ -537,3 +537,31 @@ fn an_unknown_procedure_reports_its_code_and_criticality() {
         }
     );
 }
+
+#[test]
+fn the_unknown_ie_recorder_collects_only_while_active_and_nests() {
+    use ngap_aper::ie::{Criticality, RawIe, note_unknown, record_unknown_ies};
+    let ie = |id| RawIe {
+        id,
+        criticality: Criticality::Ignore,
+        content: vec![0],
+    };
+    note_unknown(&ie(1)); // nobody is recording: dropped
+    let (((), inner), outer) = record_unknown_ies(|| {
+        note_unknown(&ie(2));
+        let r = record_unknown_ies(|| {
+            note_unknown(&ie(3));
+        });
+        note_unknown(&ie(4));
+        r
+    });
+    let ids = |v: &[RawIe]| v.iter().map(|i| i.id).collect::<Vec<_>>();
+    assert_eq!(
+        ids(&inner),
+        vec![3],
+        "the inner scope gets only its own IEs"
+    );
+    assert_eq!(ids(&outer), vec![2, 4]);
+    let (_, after) = record_unknown_ies(|| {});
+    assert!(after.is_empty(), "nothing leaks into the next recording");
+}

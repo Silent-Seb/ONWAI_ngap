@@ -5,6 +5,229 @@ use ngap_aper as rt;
 use rt::{AperDecode as _, AperEncode as _};
 use crate::*;
 
+/// The extension IEs of `QosFlowInformationItem-ExtIEs` (NGAP-IEs). IEs not defined here are kept in `unknown_ies`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct QosFlowInformationItemExtIes {
+    /// `id-ULForwarding` (id 163, Ignore, Optional)
+    pub ul_forwarding: Option<UlForwarding>,
+    /// `id-SourceTNLAddrInfo` (id 284, Ignore, Optional)
+    pub source_tnl_addr_info: Option<TransportLayerAddress>,
+    /// `id-SourceNodeTNLAddrInfo` (id 354, Ignore, Optional)
+    pub source_node_tnl_addr_info: Option<TransportLayerAddress>,
+    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
+    pub unknown_ies: Vec<rt::ie::RawIe>,
+}
+
+impl QosFlowInformationItemExtIes {
+    /// A value with the mandatory IEs given and every optional one absent.
+    pub fn new() -> Self {
+        Self {
+            ul_forwarding: None,
+            source_tnl_addr_info: None,
+            source_node_tnl_addr_info: None,
+            unknown_ies: Vec::new(),
+        }
+    }
+}
+
+impl rt::AperEncode for QosFlowInformationItemExtIes {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
+        if let Some(x) = &self.ul_forwarding {
+            ies.push(rt::ie::RawIe::new(163, rt::ie::Criticality::Ignore, x)?);
+        }
+        if let Some(x) = &self.source_tnl_addr_info {
+            ies.push(rt::ie::RawIe::new(284, rt::ie::Criticality::Ignore, x)?);
+        }
+        if let Some(x) = &self.source_node_tnl_addr_info {
+            ies.push(rt::ie::RawIe::new(354, rt::ie::Criticality::Ignore, x)?);
+        }
+        ies.extend(self.unknown_ies.iter().cloned());
+        rt::ie::write_container(w, rt::Size::range(1, 65535), &ies)
+    }
+}
+
+impl rt::AperDecode for QosFlowInformationItemExtIes {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let mut s_ul_forwarding: Option<UlForwarding> = None;
+        let mut s_source_tnl_addr_info: Option<TransportLayerAddress> = None;
+        let mut s_source_node_tnl_addr_info: Option<TransportLayerAddress> = None;
+        let mut unknown_ies = Vec::new();
+        for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
+            match ie.id {
+                163 => rt::ie::set_once(&mut s_ul_forwarding, 163, ie.decode()?)?,
+                284 => rt::ie::set_once(&mut s_source_tnl_addr_info, 284, ie.decode()?)?,
+                354 => rt::ie::set_once(&mut s_source_node_tnl_addr_info, 354, ie.decode()?)?,
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
+            }
+        }
+        Ok(Self {
+            ul_forwarding: s_ul_forwarding,
+            source_tnl_addr_info: s_source_tnl_addr_info,
+            source_node_tnl_addr_info: s_source_node_tnl_addr_info,
+            unknown_ies,
+        })
+    }
+}
+
+/// ASN.1 `QosFlowInformationItem` (NGAP-IEs).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QosFlowInformationItem {
+    /// `qosFlowIdentifier`
+    pub qos_flow_identifier: QosFlowIdentifier,
+    /// `dLForwarding`
+    pub dl_forwarding: Option<DlForwarding>,
+    /// `iE-Extensions`
+    pub ie_extensions: Option<QosFlowInformationItemExtIes>,
+}
+
+impl QosFlowInformationItem {
+    /// A value with the mandatory components given and every optional one absent.
+    pub fn new(qos_flow_identifier: QosFlowIdentifier) -> Self {
+        Self {
+            qos_flow_identifier,
+            dl_forwarding: None,
+            ie_extensions: None,
+        }
+    }
+}
+
+impl rt::AperEncode for QosFlowInformationItem {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        w.write_bit(false); // extension marker: no additions
+        w.write_bit(self.dl_forwarding.is_some());
+        w.write_bit(self.ie_extensions.is_some());
+        {
+            let x = &self.qos_flow_identifier;
+            x.aper_encode(w)?;
+        }
+        if let Some(x) = &self.dl_forwarding {
+            x.aper_encode(w)?;
+        }
+        if let Some(x) = &self.ie_extensions {
+            x.aper_encode(w)?;
+        }
+        Ok(())
+    }
+}
+
+impl rt::AperDecode for QosFlowInformationItem {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let extension = r.read_bit()?;
+        let p_dl_forwarding = r.read_bit()?;
+        let p_ie_extensions = r.read_bit()?;
+        let v_qos_flow_identifier = <QosFlowIdentifier>::aper_decode(r)?;
+        let v_dl_forwarding = if p_dl_forwarding { Some(<DlForwarding>::aper_decode(r)?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(<QosFlowInformationItemExtIes>::aper_decode(r)?) } else { None };
+        if extension {
+            r.read_extension_additions()?;
+        }
+        Ok(Self {
+            qos_flow_identifier: v_qos_flow_identifier,
+            dl_forwarding: v_dl_forwarding,
+            ie_extensions: v_ie_extensions,
+        })
+    }
+}
+
+/// The extension IEs of `QosFlowLevelQosParameters-ExtIEs` (NGAP-IEs). IEs not defined here are kept in `unknown_ies`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct QosFlowLevelQosParametersExtIes {
+    /// `id-QosMonitoringRequest` (id 181, Ignore, Optional)
+    pub qos_monitoring_request: Option<QosMonitoringRequest>,
+    /// `id-QosMonitoringReportingFrequency` (id 276, Ignore, Optional)
+    pub qos_monitoring_reporting_frequency: Option<QosMonitoringReportingFrequency>,
+    /// `id-PDUsetQoSParameters` (id 422, Ignore, Optional)
+    pub pd_uset_qos_parameters: Option<PdUsetQosParameters>,
+    /// `id-DLPDUSetInformationMarkingSupportIndication` (id 488, Ignore, Optional)
+    pub dlpdu_set_information_marking_support_indication: Option<DlpduSetInformationMarkingSupportIndication>,
+    /// `id-MMSID` (id 490, Ignore, Optional)
+    pub mmsid: Option<Mmsid>,
+    /// `id-Indication-of-Bitrate-Adaptation` (id 491, Ignore, Optional)
+    pub indication_of_bitrate_adaptation: Option<IndicationOfBitrateAdaptation>,
+    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
+    pub unknown_ies: Vec<rt::ie::RawIe>,
+}
+
+impl QosFlowLevelQosParametersExtIes {
+    /// A value with the mandatory IEs given and every optional one absent.
+    pub fn new() -> Self {
+        Self {
+            qos_monitoring_request: None,
+            qos_monitoring_reporting_frequency: None,
+            pd_uset_qos_parameters: None,
+            dlpdu_set_information_marking_support_indication: None,
+            mmsid: None,
+            indication_of_bitrate_adaptation: None,
+            unknown_ies: Vec::new(),
+        }
+    }
+}
+
+impl rt::AperEncode for QosFlowLevelQosParametersExtIes {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
+        if let Some(x) = &self.qos_monitoring_request {
+            ies.push(rt::ie::RawIe::new(181, rt::ie::Criticality::Ignore, x)?);
+        }
+        if let Some(x) = &self.qos_monitoring_reporting_frequency {
+            ies.push(rt::ie::RawIe::new(276, rt::ie::Criticality::Ignore, x)?);
+        }
+        if let Some(x) = &self.pd_uset_qos_parameters {
+            ies.push(rt::ie::RawIe::new(422, rt::ie::Criticality::Ignore, x)?);
+        }
+        if let Some(x) = &self.dlpdu_set_information_marking_support_indication {
+            ies.push(rt::ie::RawIe::new(488, rt::ie::Criticality::Ignore, x)?);
+        }
+        if let Some(x) = &self.mmsid {
+            ies.push(rt::ie::RawIe::new(490, rt::ie::Criticality::Ignore, x)?);
+        }
+        if let Some(x) = &self.indication_of_bitrate_adaptation {
+            ies.push(rt::ie::RawIe::new(491, rt::ie::Criticality::Ignore, x)?);
+        }
+        ies.extend(self.unknown_ies.iter().cloned());
+        rt::ie::write_container(w, rt::Size::range(1, 65535), &ies)
+    }
+}
+
+impl rt::AperDecode for QosFlowLevelQosParametersExtIes {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let mut s_qos_monitoring_request: Option<QosMonitoringRequest> = None;
+        let mut s_qos_monitoring_reporting_frequency: Option<QosMonitoringReportingFrequency> = None;
+        let mut s_pd_uset_qos_parameters: Option<PdUsetQosParameters> = None;
+        let mut s_dlpdu_set_information_marking_support_indication: Option<DlpduSetInformationMarkingSupportIndication> = None;
+        let mut s_mmsid: Option<Mmsid> = None;
+        let mut s_indication_of_bitrate_adaptation: Option<IndicationOfBitrateAdaptation> = None;
+        let mut unknown_ies = Vec::new();
+        for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
+            match ie.id {
+                181 => rt::ie::set_once(&mut s_qos_monitoring_request, 181, ie.decode()?)?,
+                276 => rt::ie::set_once(&mut s_qos_monitoring_reporting_frequency, 276, ie.decode()?)?,
+                422 => rt::ie::set_once(&mut s_pd_uset_qos_parameters, 422, ie.decode()?)?,
+                488 => rt::ie::set_once(&mut s_dlpdu_set_information_marking_support_indication, 488, ie.decode()?)?,
+                490 => rt::ie::set_once(&mut s_mmsid, 490, ie.decode()?)?,
+                491 => rt::ie::set_once(&mut s_indication_of_bitrate_adaptation, 491, ie.decode()?)?,
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
+            }
+        }
+        Ok(Self {
+            qos_monitoring_request: s_qos_monitoring_request,
+            qos_monitoring_reporting_frequency: s_qos_monitoring_reporting_frequency,
+            pd_uset_qos_parameters: s_pd_uset_qos_parameters,
+            dlpdu_set_information_marking_support_indication: s_dlpdu_set_information_marking_support_indication,
+            mmsid: s_mmsid,
+            indication_of_bitrate_adaptation: s_indication_of_bitrate_adaptation,
+            unknown_ies,
+        })
+    }
+}
+
 /// ASN.1 `QosFlowLevelQosParameters` (NGAP-IEs).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct QosFlowLevelQosParameters {
@@ -229,7 +452,7 @@ impl rt::AperDecode for QosFlowWithCauseItem {
         let p_ie_extensions = r.read_bit()?;
         let v_qos_flow_identifier = <QosFlowIdentifier>::aper_decode(r)?;
         let v_cause = <Cause>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -297,7 +520,7 @@ impl rt::AperDecode for QosFlowModifyConfirmItem {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_qos_flow_identifier = <QosFlowIdentifier>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -370,7 +593,10 @@ impl rt::AperDecode for QosFlowNotifyItemExtIes {
             match ie.id {
                 221 => rt::ie::set_once(&mut s_current_qos_para_set_index, 221, ie.decode()?)?,
                 393 => rt::ie::set_once(&mut s_tsc_traffic_characteristics_feedback, 393, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -510,7 +736,10 @@ impl rt::AperDecode for QosFlowParametersItemExtIes {
                 187 => rt::ie::set_once(&mut s_cn_packet_delay_budget_dl, 187, ie.decode()?)?,
                 188 => rt::ie::set_once(&mut s_cn_packet_delay_budget_ul, 188, ie.decode()?)?,
                 279 => rt::ie::set_once(&mut s_burst_arrival_time_downlink, 279, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -629,7 +858,7 @@ impl rt::AperDecode for QosFlowPerTnlInformation {
         let p_ie_extensions = r.read_bit()?;
         let v_up_transport_layer_information = <UpTransportLayerInformation>::aper_decode(r)?;
         let v_associated_qos_flow_list = <AssociatedQosFlowList>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -697,7 +926,7 @@ impl rt::AperDecode for QosFlowPerTnlInformationItem {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_qos_flow_per_tnl_information = <QosFlowPerTnlInformation>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -778,7 +1007,10 @@ impl rt::AperDecode for QosFlowSetupRequestItemExtIes {
                 196 => rt::ie::set_once(&mut s_tsc_traffic_characteristics, 196, ie.decode()?)?,
                 194 => rt::ie::set_once(&mut s_redundant_qos_flow_indicator, 194, ie.decode()?)?,
                 425 => rt::ie::set_once(&mut s_ecn_markingor_congestion_information_reporting_request, 425, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -913,7 +1145,10 @@ impl rt::AperDecode for QosFlowItemWithDataForwardingExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 221 => rt::ie::set_once(&mut s_current_qos_para_set_index, 221, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -1039,7 +1274,7 @@ impl rt::AperDecode for QosFlowToBeForwardedItem {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_qos_flow_identifier = <QosFlowIdentifier>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1124,7 +1359,7 @@ impl rt::AperDecode for QosFlowTscItem {
         let v_qos_flow_identifier = <QosFlowIdentifier>::aper_decode(r)?;
         let v_tsc_traffic_characteristics_feedback = if p_tsc_traffic_characteristics_feedback { Some(<TscTrafficCharacteristicsFeedback>::aper_decode(r)?) } else { None };
         let v_an_packet_delay_budget_ul = if p_an_packet_delay_budget_ul { Some(<ExtendedPacketDelayBudget>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1247,7 +1482,7 @@ impl rt::AperDecode for QosFlowsUsageReportItem {
         let v_qos_flow_identifier = <QosFlowIdentifier>::aper_decode(r)?;
         let v_rat_type = <QosFlowsUsageReportItemRatType>::aper_decode(r)?;
         let v_qo_s_flows_timed_report_list = <VolumeTimedReportList>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1349,7 +1584,7 @@ impl rt::AperDecode for RaNfeedbacktypeProactive {
         let p_ie_extension = r.read_bit()?;
         let v_burst_arrival_time_window = <BurstArrivalTimeWindow>::aper_decode(r)?;
         let v_periodicity_range = if p_periodicity_range { Some(<PeriodicityRange>::aper_decode(r)?) } else { None };
-        let v_ie_extension = if p_ie_extension { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extension = if p_ie_extension { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1426,7 +1661,7 @@ impl rt::AperDecode for RaNfeedbacktypeReactive {
         let extension = r.read_bit()?;
         let p_ie_extension = r.read_bit()?;
         let v_capability_for_bat_adaptation = <RaNfeedbacktypeReactiveCapabilityForBatAdaptation>::aper_decode(r)?;
-        let v_ie_extension = if p_ie_extension { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extension = if p_ie_extension { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1601,7 +1836,7 @@ impl rt::AperDecode for RanStatusTransferTransparentContainer {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_drbs_subject_to_status_transfer_list = <DrbsSubjectToStatusTransferList>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1791,7 +2026,7 @@ impl rt::AperDecode for RanTimingSynchronisationStatusInfo {
         let v_clock_frequency_stability = if p_clock_frequency_stability { Some(r.read_bit_string(rt::Size::fixed(16))?) } else { None };
         let v_clock_accuracy = if p_clock_accuracy { Some(<ClockAccuracy>::aper_decode(r)?) } else { None };
         let v_parent_t_ime_source = if p_parent_t_ime_source { Some(<ParentTImeSource>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1934,7 +2169,7 @@ impl rt::AperDecode for RantssCellItem {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_nrcgi = <NrCgi>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -2061,7 +2296,10 @@ impl rt::AperDecode for RatRestrictionsItemExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 180 => rt::ie::set_once(&mut s_extended_rat_restriction_information, 180, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -2186,7 +2424,7 @@ impl rt::AperDecode for RecommendedCellsForPaging {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_recommended_cell_list = <RecommendedCellList>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -2211,285 +2449,5 @@ impl rt::AperEncode for RecommendedCellList {
 impl rt::AperDecode for RecommendedCellList {
     fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
         Ok(Self(r.read_seq_of(rt::Size::range(1, 16), |r| <RecommendedCellItem>::aper_decode(r))?))
-    }
-}
-
-/// ASN.1 `RecommendedCellItem` (NGAP-IEs).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RecommendedCellItem {
-    /// `nGRAN-CGI`
-    pub ngran_cgi: NgranCgi,
-    /// `timeStayedInCell`
-    pub time_stayed_in_cell: Option<u16>,
-    /// `iE-Extensions`
-    pub ie_extensions: Option<rt::ie::UnknownIes>,
-}
-
-impl RecommendedCellItem {
-    /// A value with the mandatory components given and every optional one absent.
-    pub fn new(ngran_cgi: NgranCgi) -> Self {
-        Self {
-            ngran_cgi,
-            time_stayed_in_cell: None,
-            ie_extensions: None,
-        }
-    }
-}
-
-impl rt::AperEncode for RecommendedCellItem {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        w.write_bit(false); // extension marker: no additions
-        w.write_bit(self.time_stayed_in_cell.is_some());
-        w.write_bit(self.ie_extensions.is_some());
-        {
-            let x = &self.ngran_cgi;
-            x.aper_encode(w)?;
-        }
-        if let Some(x) = &self.time_stayed_in_cell {
-            w.write_int(i128::from(*x), &rt::IntSpec::range(0, 4095))?;
-        }
-        if let Some(x) = &self.ie_extensions {
-            rt::ie::write_container(w, rt::Size::range(1, 65535), &x.ies)?;
-        }
-        Ok(())
-    }
-}
-
-impl rt::AperDecode for RecommendedCellItem {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let extension = r.read_bit()?;
-        let p_time_stayed_in_cell = r.read_bit()?;
-        let p_ie_extensions = r.read_bit()?;
-        let v_ngran_cgi = <NgranCgi>::aper_decode(r)?;
-        let v_time_stayed_in_cell = if p_time_stayed_in_cell { Some(r.read_int_as::<u16>(&rt::IntSpec::range(0, 4095))?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
-        if extension {
-            r.read_extension_additions()?;
-        }
-        Ok(Self {
-            ngran_cgi: v_ngran_cgi,
-            time_stayed_in_cell: v_time_stayed_in_cell,
-            ie_extensions: v_ie_extensions,
-        })
-    }
-}
-
-/// ASN.1 `RecommendedRANNodesForPaging` (NGAP-IEs).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RecommendedRanNodesForPaging {
-    /// `recommendedRANNodeList`
-    pub recommended_ran_node_list: RecommendedRanNodeList,
-    /// `iE-Extensions`
-    pub ie_extensions: Option<rt::ie::UnknownIes>,
-}
-
-impl RecommendedRanNodesForPaging {
-    /// A value with the mandatory components given and every optional one absent.
-    pub fn new(recommended_ran_node_list: RecommendedRanNodeList) -> Self {
-        Self {
-            recommended_ran_node_list,
-            ie_extensions: None,
-        }
-    }
-}
-
-impl rt::AperEncode for RecommendedRanNodesForPaging {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        w.write_bit(false); // extension marker: no additions
-        w.write_bit(self.ie_extensions.is_some());
-        {
-            let x = &self.recommended_ran_node_list;
-            x.aper_encode(w)?;
-        }
-        if let Some(x) = &self.ie_extensions {
-            rt::ie::write_container(w, rt::Size::range(1, 65535), &x.ies)?;
-        }
-        Ok(())
-    }
-}
-
-impl rt::AperDecode for RecommendedRanNodesForPaging {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let extension = r.read_bit()?;
-        let p_ie_extensions = r.read_bit()?;
-        let v_recommended_ran_node_list = <RecommendedRanNodeList>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
-        if extension {
-            r.read_extension_additions()?;
-        }
-        Ok(Self {
-            recommended_ran_node_list: v_recommended_ran_node_list,
-            ie_extensions: v_ie_extensions,
-        })
-    }
-}
-
-/// ASN.1 `RecommendedRANNodeList` (NGAP-IEs).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RecommendedRanNodeList(pub Vec<RecommendedRanNodeItem>);
-
-impl rt::AperEncode for RecommendedRanNodeList {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        let x = &self.0;
-        w.write_seq_of(x, rt::Size::range(1, 16), |w, x| x.aper_encode(w))
-    }
-}
-
-impl rt::AperDecode for RecommendedRanNodeList {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        Ok(Self(r.read_seq_of(rt::Size::range(1, 16), |r| <RecommendedRanNodeItem>::aper_decode(r))?))
-    }
-}
-
-/// ASN.1 `RecommendedRANNodeItem` (NGAP-IEs).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RecommendedRanNodeItem {
-    /// `aMFPagingTarget`
-    pub amf_paging_target: AmfPagingTarget,
-    /// `iE-Extensions`
-    pub ie_extensions: Option<rt::ie::UnknownIes>,
-}
-
-impl RecommendedRanNodeItem {
-    /// A value with the mandatory components given and every optional one absent.
-    pub fn new(amf_paging_target: AmfPagingTarget) -> Self {
-        Self {
-            amf_paging_target,
-            ie_extensions: None,
-        }
-    }
-}
-
-impl rt::AperEncode for RecommendedRanNodeItem {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        w.write_bit(false); // extension marker: no additions
-        w.write_bit(self.ie_extensions.is_some());
-        {
-            let x = &self.amf_paging_target;
-            x.aper_encode(w)?;
-        }
-        if let Some(x) = &self.ie_extensions {
-            rt::ie::write_container(w, rt::Size::range(1, 65535), &x.ies)?;
-        }
-        Ok(())
-    }
-}
-
-impl rt::AperDecode for RecommendedRanNodeItem {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let extension = r.read_bit()?;
-        let p_ie_extensions = r.read_bit()?;
-        let v_amf_paging_target = <AmfPagingTarget>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
-        if extension {
-            r.read_extension_additions()?;
-        }
-        Ok(Self {
-            amf_paging_target: v_amf_paging_target,
-            ie_extensions: v_ie_extensions,
-        })
-    }
-}
-
-/// ASN.1 `RedCapIndication` (NGAP-IEs).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[non_exhaustive]
-pub enum RedCapIndication {
-    /// `redcap`
-    Redcap,
-}
-
-impl rt::AperEncode for RedCapIndication {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        let index: u64 = match self {
-            Self::Redcap => 0,
-        };
-        w.write_index(index, 1, true)
-    }
-}
-
-impl rt::AperDecode for RedCapIndication {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        Ok(match r.read_index(1, true)? {
-            0 => Self::Redcap,
-            i => return Err(r.error(rt::ErrorKind::InvalidIndex(i))),
-        })
-    }
-}
-
-/// ASN.1 `RedirectionVoiceFallback` (NGAP-IEs).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[non_exhaustive]
-pub enum RedirectionVoiceFallback {
-    /// `possible`
-    Possible,
-    /// `not-possible`
-    NotPossible,
-}
-
-impl rt::AperEncode for RedirectionVoiceFallback {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        let index: u64 = match self {
-            Self::Possible => 0,
-            Self::NotPossible => 1,
-        };
-        w.write_index(index, 2, true)
-    }
-}
-
-impl rt::AperDecode for RedirectionVoiceFallback {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        Ok(match r.read_index(2, true)? {
-            0 => Self::Possible,
-            1 => Self::NotPossible,
-            i => return Err(r.error(rt::ErrorKind::InvalidIndex(i))),
-        })
-    }
-}
-
-/// The extension IEs of `RedundantPDUSessionInformation-ExtIEs` (NGAP-IEs). IEs not defined here are kept in `unknown_ies`.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct RedundantPduSessionInformationExtIes {
-    /// `id-PDUSessionPairID` (id 331, Ignore, Optional)
-    pub pdu_session_pair_id: Option<PduSessionPairId>,
-    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
-    pub unknown_ies: Vec<rt::ie::RawIe>,
-}
-
-impl RedundantPduSessionInformationExtIes {
-    /// A value with the mandatory IEs given and every optional one absent.
-    pub fn new() -> Self {
-        Self {
-            pdu_session_pair_id: None,
-            unknown_ies: Vec::new(),
-        }
-    }
-}
-
-impl rt::AperEncode for RedundantPduSessionInformationExtIes {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        if let Some(x) = &self.pdu_session_pair_id {
-            ies.push(rt::ie::RawIe::new(331, rt::ie::Criticality::Ignore, x)?);
-        }
-        ies.extend(self.unknown_ies.iter().cloned());
-        rt::ie::write_container(w, rt::Size::range(1, 65535), &ies)
-    }
-}
-
-impl rt::AperDecode for RedundantPduSessionInformationExtIes {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let mut s_pdu_session_pair_id: Option<PduSessionPairId> = None;
-        let mut unknown_ies = Vec::new();
-        for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
-            match ie.id {
-                331 => rt::ie::set_once(&mut s_pdu_session_pair_id, 331, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
-            }
-        }
-        Ok(Self {
-            pdu_session_pair_id: s_pdu_session_pair_id,
-            unknown_ies,
-        })
     }
 }

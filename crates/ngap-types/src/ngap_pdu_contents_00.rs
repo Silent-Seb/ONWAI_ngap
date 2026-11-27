@@ -95,7 +95,10 @@ impl rt::AperDecode for PduSessionResourceSetupRequest {
                 74 => rt::ie::set_once(&mut s_pdu_session_resource_setup_list_su_req, 74, ie.decode()?)?,
                 110 => rt::ie::set_once(&mut s_ue_aggregate_maximum_bit_rate, 110, ie.decode()?)?,
                 335 => rt::ie::set_once(&mut s_ue_slice_maximum_bit_rate_list, 335, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -206,7 +209,10 @@ impl rt::AperDecode for PduSessionResourceSetupResponse {
                 58 => rt::ie::set_once(&mut s_pdu_session_resource_failed_to_setup_list_su_res, 58, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
                 121 => rt::ie::set_once(&mut s_user_location_information, 121, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -309,7 +315,10 @@ impl rt::AperDecode for PduSessionResourceReleaseCommand {
                 83 => rt::ie::set_once(&mut s_ran_paging_priority, 83, ie.decode()?)?,
                 38 => rt::ie::set_once(&mut s_nas_pdu, 38, ie.decode()?)?,
                 79 => rt::ie::set_once(&mut s_pdu_session_resource_to_release_list_rel_cmd, 79, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -411,7 +420,10 @@ impl rt::AperDecode for PduSessionResourceReleaseResponse {
                 70 => rt::ie::set_once(&mut s_pdu_session_resource_released_list_rel_res, 70, ie.decode()?)?,
                 121 => rt::ie::set_once(&mut s_user_location_information, 121, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -505,7 +517,10 @@ impl rt::AperDecode for PduSessionResourceModifyRequest {
                 85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
                 83 => rt::ie::set_once(&mut s_ran_paging_priority, 83, ie.decode()?)?,
                 64 => rt::ie::set_once(&mut s_pdu_session_resource_modify_list_mod_req, 64, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -613,7 +628,10 @@ impl rt::AperDecode for PduSessionResourceModifyResponse {
                 54 => rt::ie::set_once(&mut s_pdu_session_resource_failed_to_modify_list_mod_res, 54, ie.decode()?)?,
                 121 => rt::ie::set_once(&mut s_user_location_information, 121, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -715,7 +733,10 @@ impl rt::AperDecode for PduSessionResourceNotify {
                 66 => rt::ie::set_once(&mut s_pdu_session_resource_notify_list, 66, ie.decode()?)?,
                 67 => rt::ie::set_once(&mut s_pdu_session_resource_released_list_not, 67, ie.decode()?)?,
                 121 => rt::ie::set_once(&mut s_user_location_information, 121, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -809,7 +830,10 @@ impl rt::AperDecode for PduSessionResourceModifyIndication {
                 85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
                 63 => rt::ie::set_once(&mut s_pdu_session_resource_modify_list_mod_ind, 63, ie.decode()?)?,
                 121 => rt::ie::set_once(&mut s_user_location_information, 121, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -909,7 +933,10 @@ impl rt::AperDecode for PduSessionResourceModifyConfirm {
                 62 => rt::ie::set_once(&mut s_pdu_session_resource_modify_list_mod_cfm, 62, ie.decode()?)?,
                 131 => rt::ie::set_once(&mut s_pdu_session_resource_failed_to_modify_list_mod_cfm, 131, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1422,7 +1449,10 @@ impl rt::AperDecode for InitialContextSetupRequest {
                 430 => rt::ie::set_once(&mut s_sl_positioning_ranging_service_info, 430, ie.decode()?)?,
                 443 => rt::ie::set_once(&mut s_extended_old_amf, 443, ie.decode()?)?,
                 450 => rt::ie::set_once(&mut s_amf_ue_ngap_id2, 450, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1574,7 +1604,10 @@ impl rt::AperDecode for InitialContextSetupResponse {
                 72 => rt::ie::set_once(&mut s_pdu_session_resource_setup_list_cxt_res, 72, ie.decode()?)?,
                 55 => rt::ie::set_once(&mut s_pdu_session_resource_failed_to_setup_list_cxt_res, 55, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1676,7 +1709,10 @@ impl rt::AperDecode for InitialContextSetupFailure {
                 132 => rt::ie::set_once(&mut s_pdu_session_resource_failed_to_setup_list_cxt_fail, 132, ie.decode()?)?,
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1778,7 +1814,10 @@ impl rt::AperDecode for UeContextReleaseRequest {
                 133 => rt::ie::set_once(&mut s_pdu_session_resource_list_cxt_rel_req, 133, ie.decode()?)?,
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 452 => rt::ie::set_once(&mut s_gw_context_release_indication, 452, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1855,7 +1894,10 @@ impl rt::AperDecode for UeContextReleaseCommand {
             match ie.id {
                 114 => rt::ie::set_once(&mut s_ue_ngap_ids, 114, ie.decode()?)?,
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1969,7 +2011,10 @@ impl rt::AperDecode for UeContextReleaseComplete {
                 60 => rt::ie::set_once(&mut s_pdu_session_resource_list_cxt_rel_cpl, 60, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
                 207 => rt::ie::set_once(&mut s_paging_assis_datafor_c_ecapab_ue, 207, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -2105,7 +2150,10 @@ impl rt::AperDecode for UeContextResumeRequest {
                 32 => rt::ie::set_once(&mut s_info_on_recommended_cells_and_ran_nodes_for_paging, 32, ie.decode()?)?,
                 207 => rt::ie::set_once(&mut s_paging_assis_datafor_c_ecapab_ue, 207, ie.decode()?)?,
                 121 => rt::ie::set_once(&mut s_user_location_information, 121, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -2234,7 +2282,10 @@ impl rt::AperDecode for UeContextResumeResponse {
                 236 => rt::ie::set_once(&mut s_suspend_response_indication, 236, ie.decode()?)?,
                 206 => rt::ie::set_once(&mut s_extended_connected_time, 206, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -2331,7 +2382,10 @@ impl rt::AperDecode for UeContextResumeFailure {
                 85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -2351,116 +2405,6 @@ impl UeContextResumeFailure {
     /// The ids of the IEs this version of the specification defines for the message, in the order the
     /// specification requires them on the wire.
     pub const IE_IDS: &'static [u32] = &[10, 85, 15, 19];
-
-    /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
-    pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {
-        rt::ie::wire_ie_ids(content, true, rt::Size::range(0, 65535))
-    }
-}
-
-/// ASN.1 `UEContextSuspendRequest` (NGAP-PDU-Contents): the IEs of the message are the fields.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UeContextSuspendRequest {
-    /// `id-AMF-UE-NGAP-ID` (id 10, Reject, Mandatory)
-    pub amf_ue_ngap_id: AmfUeNgapId,
-    /// `id-RAN-UE-NGAP-ID` (id 85, Reject, Mandatory)
-    pub ran_ue_ngap_id: RanUeNgapId,
-    /// `id-InfoOnRecommendedCellsAndRANNodesForPaging` (id 32, Ignore, Optional)
-    pub info_on_recommended_cells_and_ran_nodes_for_paging: Option<InfoOnRecommendedCellsAndRanNodesForPaging>,
-    /// `id-PagingAssisDataforCEcapabUE` (id 207, Ignore, Optional)
-    pub paging_assis_datafor_c_ecapab_ue: Option<PagingAssisDataforCEcapabUe>,
-    /// `id-PDUSessionResourceSuspendListSUSReq` (id 231, Reject, Optional)
-    pub pdu_session_resource_suspend_list_sus_req: Option<PduSessionResourceSuspendListSusReq>,
-    /// `id-UserLocationInformation` (id 121, Ignore, Optional)
-    pub user_location_information: Option<UserLocationInformation>,
-    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
-    pub unknown_ies: Vec<rt::ie::RawIe>,
-}
-
-impl UeContextSuspendRequest {
-    /// A value with the mandatory IEs given and every optional one absent.
-    pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId) -> Self {
-        Self {
-            amf_ue_ngap_id,
-            ran_ue_ngap_id,
-            info_on_recommended_cells_and_ran_nodes_for_paging: None,
-            paging_assis_datafor_c_ecapab_ue: None,
-            pdu_session_resource_suspend_list_sus_req: None,
-            user_location_information: None,
-            unknown_ies: Vec::new(),
-        }
-    }
-}
-
-impl rt::AperEncode for UeContextSuspendRequest {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        w.write_bit(false); // extension marker: no additions
-        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.amf_ue_ngap_id;
-            ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Reject, x)?);
-        }
-        {
-            let x = &self.ran_ue_ngap_id;
-            ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Reject, x)?);
-        }
-        if let Some(x) = &self.info_on_recommended_cells_and_ran_nodes_for_paging {
-            ies.push(rt::ie::RawIe::new(32, rt::ie::Criticality::Ignore, x)?);
-        }
-        if let Some(x) = &self.paging_assis_datafor_c_ecapab_ue {
-            ies.push(rt::ie::RawIe::new(207, rt::ie::Criticality::Ignore, x)?);
-        }
-        if let Some(x) = &self.pdu_session_resource_suspend_list_sus_req {
-            ies.push(rt::ie::RawIe::new(231, rt::ie::Criticality::Reject, x)?);
-        }
-        if let Some(x) = &self.user_location_information {
-            ies.push(rt::ie::RawIe::new(121, rt::ie::Criticality::Ignore, x)?);
-        }
-        ies.extend(self.unknown_ies.iter().cloned());
-        rt::ie::write_container(w, rt::Size::range(0, 65535), &ies)
-    }
-}
-
-impl rt::AperDecode for UeContextSuspendRequest {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let extension = r.read_bit()?;
-        let mut s_amf_ue_ngap_id: Option<AmfUeNgapId> = None;
-        let mut s_ran_ue_ngap_id: Option<RanUeNgapId> = None;
-        let mut s_info_on_recommended_cells_and_ran_nodes_for_paging: Option<InfoOnRecommendedCellsAndRanNodesForPaging> = None;
-        let mut s_paging_assis_datafor_c_ecapab_ue: Option<PagingAssisDataforCEcapabUe> = None;
-        let mut s_pdu_session_resource_suspend_list_sus_req: Option<PduSessionResourceSuspendListSusReq> = None;
-        let mut s_user_location_information: Option<UserLocationInformation> = None;
-        let mut unknown_ies = Vec::new();
-        for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
-            match ie.id {
-                10 => rt::ie::set_once(&mut s_amf_ue_ngap_id, 10, ie.decode()?)?,
-                85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
-                32 => rt::ie::set_once(&mut s_info_on_recommended_cells_and_ran_nodes_for_paging, 32, ie.decode()?)?,
-                207 => rt::ie::set_once(&mut s_paging_assis_datafor_c_ecapab_ue, 207, ie.decode()?)?,
-                231 => rt::ie::set_once(&mut s_pdu_session_resource_suspend_list_sus_req, 231, ie.decode()?)?,
-                121 => rt::ie::set_once(&mut s_user_location_information, 121, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
-            }
-        }
-        if extension {
-            r.read_extension_additions()?;
-        }
-        Ok(Self {
-            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Reject)?,
-            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Reject)?,
-            info_on_recommended_cells_and_ran_nodes_for_paging: s_info_on_recommended_cells_and_ran_nodes_for_paging,
-            paging_assis_datafor_c_ecapab_ue: s_paging_assis_datafor_c_ecapab_ue,
-            pdu_session_resource_suspend_list_sus_req: s_pdu_session_resource_suspend_list_sus_req,
-            user_location_information: s_user_location_information,
-            unknown_ies,
-        })
-    }
-}
-
-impl UeContextSuspendRequest {
-    /// The ids of the IEs this version of the specification defines for the message, in the order the
-    /// specification requires them on the wire.
-    pub const IE_IDS: &'static [u32] = &[10, 85, 32, 207, 231, 121];
 
     /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
     pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {

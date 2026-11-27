@@ -5,6 +5,293 @@ use ngap_aper as rt;
 use rt::{AperDecode as _, AperEncode as _};
 use crate::*;
 
+/// ASN.1 `ULForwarding` (NGAP-IEs).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum UlForwarding {
+    /// `ul-forwarding-proposed`
+    UlForwardingProposed,
+}
+
+impl rt::AperEncode for UlForwarding {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        let index: u64 = match self {
+            Self::UlForwardingProposed => 0,
+        };
+        w.write_index(index, 1, true)
+    }
+}
+
+impl rt::AperDecode for UlForwarding {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        Ok(match r.read_index(1, true)? {
+            0 => Self::UlForwardingProposed,
+            i => return Err(r.error(rt::ErrorKind::InvalidIndex(i))),
+        })
+    }
+}
+
+/// ASN.1 `UpdateFeedback` (NGAP-IEs).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UpdateFeedback(pub rt::BitString);
+
+impl rt::AperEncode for UpdateFeedback {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        let x = &self.0;
+        w.write_bit_string(x, rt::Size::fixed(8).extensible())
+    }
+}
+
+impl rt::AperDecode for UpdateFeedback {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        Ok(Self(r.read_bit_string(rt::Size::fixed(8).extensible())?))
+    }
+}
+
+/// ASN.1 `UPTransportLayerInformation` (NGAP-IEs).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum UpTransportLayerInformation {
+    /// `gTPTunnel`
+    GtpTunnel(GtpTunnel),
+    /// `choice-Extensions`
+    ChoiceExtensions(rt::ie::RawIe),
+}
+
+impl rt::AperEncode for UpTransportLayerInformation {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        match self {
+            Self::GtpTunnel(x) => {
+                w.write_index(0, 2, false)?;
+                x.aper_encode(w)
+            }
+            Self::ChoiceExtensions(x) => {
+                w.write_index(1, 2, false)?;
+                x.aper_encode(w)
+            }
+        }
+    }
+}
+
+impl rt::AperDecode for UpTransportLayerInformation {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        match r.read_index(2, false)? {
+            0 => Ok(Self::GtpTunnel(<GtpTunnel>::aper_decode(r)?)),
+            1 => Ok(Self::ChoiceExtensions(<rt::ie::RawIe>::aper_decode(r)?)),
+            i => Err(r.error(rt::ErrorKind::InvalidIndex(i))),
+        }
+    }
+}
+
+/// ASN.1 `UPTransportLayerInformationList` (NGAP-IEs).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UpTransportLayerInformationList(pub Vec<UpTransportLayerInformationItem>);
+
+impl rt::AperEncode for UpTransportLayerInformationList {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        let x = &self.0;
+        w.write_seq_of(x, rt::Size::range(1, 3), |w, x| x.aper_encode(w))
+    }
+}
+
+impl rt::AperDecode for UpTransportLayerInformationList {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        Ok(Self(r.read_seq_of(rt::Size::range(1, 3), |r| <UpTransportLayerInformationItem>::aper_decode(r))?))
+    }
+}
+
+/// The extension IEs of `UPTransportLayerInformationItem-ExtIEs` (NGAP-IEs). IEs not defined here are kept in `unknown_ies`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct UpTransportLayerInformationItemExtIes {
+    /// `id-CommonNetworkInstance` (id 166, Ignore, Optional)
+    pub common_network_instance: Option<CommonNetworkInstance>,
+    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
+    pub unknown_ies: Vec<rt::ie::RawIe>,
+}
+
+impl UpTransportLayerInformationItemExtIes {
+    /// A value with the mandatory IEs given and every optional one absent.
+    pub fn new() -> Self {
+        Self {
+            common_network_instance: None,
+            unknown_ies: Vec::new(),
+        }
+    }
+}
+
+impl rt::AperEncode for UpTransportLayerInformationItemExtIes {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
+        if let Some(x) = &self.common_network_instance {
+            ies.push(rt::ie::RawIe::new(166, rt::ie::Criticality::Ignore, x)?);
+        }
+        ies.extend(self.unknown_ies.iter().cloned());
+        rt::ie::write_container(w, rt::Size::range(1, 65535), &ies)
+    }
+}
+
+impl rt::AperDecode for UpTransportLayerInformationItemExtIes {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let mut s_common_network_instance: Option<CommonNetworkInstance> = None;
+        let mut unknown_ies = Vec::new();
+        for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
+            match ie.id {
+                166 => rt::ie::set_once(&mut s_common_network_instance, 166, ie.decode()?)?,
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
+            }
+        }
+        Ok(Self {
+            common_network_instance: s_common_network_instance,
+            unknown_ies,
+        })
+    }
+}
+
+/// ASN.1 `UPTransportLayerInformationItem` (NGAP-IEs).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UpTransportLayerInformationItem {
+    /// `nGU-UP-TNLInformation`
+    pub ngu_up_tnl_information: UpTransportLayerInformation,
+    /// `iE-Extensions`
+    pub ie_extensions: Option<UpTransportLayerInformationItemExtIes>,
+}
+
+impl UpTransportLayerInformationItem {
+    /// A value with the mandatory components given and every optional one absent.
+    pub fn new(ngu_up_tnl_information: UpTransportLayerInformation) -> Self {
+        Self {
+            ngu_up_tnl_information,
+            ie_extensions: None,
+        }
+    }
+}
+
+impl rt::AperEncode for UpTransportLayerInformationItem {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        w.write_bit(false); // extension marker: no additions
+        w.write_bit(self.ie_extensions.is_some());
+        {
+            let x = &self.ngu_up_tnl_information;
+            x.aper_encode(w)?;
+        }
+        if let Some(x) = &self.ie_extensions {
+            x.aper_encode(w)?;
+        }
+        Ok(())
+    }
+}
+
+impl rt::AperDecode for UpTransportLayerInformationItem {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let extension = r.read_bit()?;
+        let p_ie_extensions = r.read_bit()?;
+        let v_ngu_up_tnl_information = <UpTransportLayerInformation>::aper_decode(r)?;
+        let v_ie_extensions = if p_ie_extensions { Some(<UpTransportLayerInformationItemExtIes>::aper_decode(r)?) } else { None };
+        if extension {
+            r.read_extension_additions()?;
+        }
+        Ok(Self {
+            ngu_up_tnl_information: v_ngu_up_tnl_information,
+            ie_extensions: v_ie_extensions,
+        })
+    }
+}
+
+/// ASN.1 `UPTransportLayerInformationPairList` (NGAP-IEs).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UpTransportLayerInformationPairList(pub Vec<UpTransportLayerInformationPairItem>);
+
+impl rt::AperEncode for UpTransportLayerInformationPairList {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        let x = &self.0;
+        w.write_seq_of(x, rt::Size::range(1, 3), |w, x| x.aper_encode(w))
+    }
+}
+
+impl rt::AperDecode for UpTransportLayerInformationPairList {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        Ok(Self(r.read_seq_of(rt::Size::range(1, 3), |r| <UpTransportLayerInformationPairItem>::aper_decode(r))?))
+    }
+}
+
+/// ASN.1 `UPTransportLayerInformationPairItem` (NGAP-IEs).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UpTransportLayerInformationPairItem {
+    /// `uL-NGU-UP-TNLInformation`
+    pub ul_ngu_up_tnl_information: UpTransportLayerInformation,
+    /// `dL-NGU-UP-TNLInformation`
+    pub dl_ngu_up_tnl_information: UpTransportLayerInformation,
+    /// `iE-Extensions`
+    pub ie_extensions: Option<rt::ie::UnknownIes>,
+}
+
+impl UpTransportLayerInformationPairItem {
+    /// A value with the mandatory components given and every optional one absent.
+    pub fn new(ul_ngu_up_tnl_information: UpTransportLayerInformation, dl_ngu_up_tnl_information: UpTransportLayerInformation) -> Self {
+        Self {
+            ul_ngu_up_tnl_information,
+            dl_ngu_up_tnl_information,
+            ie_extensions: None,
+        }
+    }
+}
+
+impl rt::AperEncode for UpTransportLayerInformationPairItem {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        w.write_bit(false); // extension marker: no additions
+        w.write_bit(self.ie_extensions.is_some());
+        {
+            let x = &self.ul_ngu_up_tnl_information;
+            x.aper_encode(w)?;
+        }
+        {
+            let x = &self.dl_ngu_up_tnl_information;
+            x.aper_encode(w)?;
+        }
+        if let Some(x) = &self.ie_extensions {
+            rt::ie::write_container(w, rt::Size::range(1, 65535), &x.ies)?;
+        }
+        Ok(())
+    }
+}
+
+impl rt::AperDecode for UpTransportLayerInformationPairItem {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let extension = r.read_bit()?;
+        let p_ie_extensions = r.read_bit()?;
+        let v_ul_ngu_up_tnl_information = <UpTransportLayerInformation>::aper_decode(r)?;
+        let v_dl_ngu_up_tnl_information = <UpTransportLayerInformation>::aper_decode(r)?;
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
+        if extension {
+            r.read_extension_additions()?;
+        }
+        Ok(Self {
+            ul_ngu_up_tnl_information: v_ul_ngu_up_tnl_information,
+            dl_ngu_up_tnl_information: v_dl_ngu_up_tnl_information,
+            ie_extensions: v_ie_extensions,
+        })
+    }
+}
+
+/// ASN.1 `URI-address` (NGAP-IEs).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UriAddress(pub String);
+
+impl rt::AperEncode for UriAddress {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        let x = &self.0;
+        w.write_char_string(x, rt::Size::UNBOUNDED, rt::CharSet::Visible)
+    }
+}
+
+impl rt::AperDecode for UriAddress {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        Ok(Self(r.read_char_string(rt::Size::UNBOUNDED, rt::CharSet::Visible)?))
+    }
+}
+
 /// The single IE field `UserLocationInformation-ExtIEs` (NGAP-IEs): one of the defined IEs, or an unknown one as received.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UserLocationInformationExtIes {
@@ -40,7 +327,10 @@ impl rt::AperDecode for UserLocationInformationExtIes {
             248 => Self::UserLocationInformationTwif(ie.decode()?),
             243 => Self::UserLocationInformationWAgf(ie.decode()?),
             439 => Self::UserLocationInformationN3IwfWithoutPortNumber(ie.decode()?),
-            _ => Self::Unknown(ie),
+            _ => {
+                rt::ie::note_unknown(&ie);
+                Self::Unknown(ie)
+            }
         })
     }
 }
@@ -130,7 +420,10 @@ impl rt::AperDecode for UserLocationInformationEutraExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 149 => rt::ie::set_once(&mut s_ps_cell_information, 149, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -246,7 +539,10 @@ impl rt::AperDecode for UserLocationInformationN3IwfWithPortNumberExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 213 => rt::ie::set_once(&mut s_tai, 213, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -363,7 +659,7 @@ impl rt::AperDecode for UserLocationInformationN3IwfWithoutPortNumber {
         let p_ie_extensions = r.read_bit()?;
         let v_ip_address = <TransportLayerAddress>::aper_decode(r)?;
         let v_tai = if p_tai { Some(<Tai>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -412,7 +708,10 @@ impl rt::AperDecode for UserLocationInformationTngfExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 213 => rt::ie::set_once(&mut s_tai, 213, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -528,7 +827,10 @@ impl rt::AperDecode for UserLocationInformationTwifExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 213 => rt::ie::set_once(&mut s_tai, 213, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -638,7 +940,10 @@ impl rt::AperDecode for UserLocationInformationWAgfExtIes {
             275 => Self::GlobalCableId(ie.decode()?),
             362 => Self::HfcNodeIdNew(ie.decode()?),
             363 => Self::GlobalCableIdNew(ie.decode()?),
-            _ => Self::Unknown(ie),
+            _ => {
+                rt::ie::note_unknown(&ie);
+                Self::Unknown(ie)
+            }
         })
     }
 }
@@ -761,7 +1066,10 @@ impl rt::AperDecode for UserLocationInformationNrExtIes {
                 401 => rt::ie::set_once(&mut s_mobile_iab_mt_user_location_information, 401, ie.decode()?)?,
                 483 => rt::ie::set_once(&mut s_additional_uli, 483, ie.decode()?)?,
                 493 => rt::ie::set_once(&mut s_aerial_ue_flight_information_reporting, 493, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -892,7 +1200,7 @@ impl rt::AperDecode for AerialUeFlightInformationReporting {
         let p_ie_extensions = r.read_bit()?;
         let v_altitude = <Altitude>::aper_decode(r)?;
         let v_time_stamp = <TimeStamp>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1053,7 +1361,7 @@ impl rt::AperDecode for UserPlaneFailureIndication {
         let v_user_plane_failure_type = <UserPlaneFailureType>::aper_decode(r)?;
         let v_ul_ngu_up_tnl_information = <UpTransportLayerInformation>::aper_decode(r)?;
         let v_dl_ngu_up_tnl_information = <UpTransportLayerInformation>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1177,7 +1485,7 @@ impl rt::AperDecode for UserPlaneSecurityInformation {
         let p_ie_extensions = r.read_bit()?;
         let v_security_result = <SecurityResult>::aper_decode(r)?;
         let v_security_indication = <SecurityIndication>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1269,7 +1577,7 @@ impl rt::AperDecode for VolumeTimedReportItem {
         let v_end_time_stamp = r.read_octet_string(rt::Size::fixed(4))?;
         let v_usage_count_ul = r.read_int_as::<u64>(&rt::IntSpec::range(0, 18446744073709551615))?;
         let v_usage_count_dl = r.read_int_as::<u64>(&rt::IntSpec::range(0, 18446744073709551615))?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1558,7 +1866,7 @@ impl rt::AperDecode for WlanMeasurementConfiguration {
         let v_wlan_meas_config_name_list = if p_wlan_meas_config_name_list { Some(<WlanMeasConfigNameList>::aper_decode(r)?) } else { None };
         let v_wlan_rssi = if p_wlan_rssi { Some(<WlanMeasurementConfigurationWlanRssi>::aper_decode(r)?) } else { None };
         let v_wlan_rtt = if p_wlan_rtt { Some(<WlanMeasurementConfigurationWlanRtt>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1628,7 +1936,7 @@ impl rt::AperDecode for WlanMeasConfigNameItem {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_wlan_name = <WlanName>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1721,7 +2029,7 @@ impl rt::AperDecode for WusAssistanceInformation {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_paging_probability_information = <PagingProbabilityInformation>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1786,7 +2094,10 @@ impl rt::AperDecode for XnExtTlaItemExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 173 => rt::ie::set_once(&mut s_sctp_tlas, 173, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -1939,7 +2250,7 @@ impl rt::AperDecode for XnTnlConfigurationInfo {
         let p_ie_extensions = r.read_bit()?;
         let v_xn_transport_layer_addresses = <XnTlas>::aper_decode(r)?;
         let v_xn_extended_transport_layer_addresses = if p_xn_extended_transport_layer_addresses { Some(<XnExtTlas>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }

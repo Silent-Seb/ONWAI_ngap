@@ -66,7 +66,10 @@ impl rt::AperDecode for MobilityRestrictionListExtIes {
                 161 => rt::ie::set_once(&mut s_cn_type_restrictions_for_serving, 161, ie.decode()?)?,
                 160 => rt::ie::set_once(&mut s_cn_type_restrictions_for_equivalent, 160, ie.decode()?)?,
                 261 => rt::ie::set_once(&mut s_npn_mobility_information, 261, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -274,7 +277,10 @@ impl rt::AperDecode for MdtConfigurationExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 433 => rt::ie::set_once(&mut s_mn_only_mdt_collection, 433, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -416,7 +422,10 @@ impl rt::AperDecode for MdtConfigurationNrExtIes {
             match ie.id {
                 409 => rt::ie::set_once(&mut s_pni_npn_area_scopeof_mdt, 409, ie.decode()?)?,
                 447 => rt::ie::set_once(&mut s_network_slice_area_scopeof_mdt, 447, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -569,7 +578,7 @@ impl rt::AperDecode for MdtConfigurationEutra {
         let v_area_scope_of_mdt = <AreaScopeOfMdtEutra>::aper_decode(r)?;
         let v_mdt_mode = <MdtModeEutra>::aper_decode(r)?;
         let v_signalling_based_mdtplmn_list = if p_signalling_based_mdtplmn_list { Some(<MdtplmnList>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -831,7 +840,7 @@ impl rt::AperDecode for MonitoringRequestonAvailableBitrate {
         let v_monitoring_request = <MonitoringRequest>::aper_decode(r)?;
         let v_dl_available_bitrate_report_thresholds = if p_dl_available_bitrate_report_thresholds { Some(<AvailableBitrateReportThresholdList>::aper_decode(r)?) } else { None };
         let v_ul_available_bitrate_report_thresholds = if p_ul_available_bitrate_report_thresholds { Some(<AvailableBitrateReportThresholdList>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -937,7 +946,7 @@ impl rt::AperDecode for MulticastSessionActivationRequestTransfer {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_mbs_session_id = <MbsSessionId>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -987,7 +996,7 @@ impl rt::AperDecode for MulticastSessionDeactivationRequestTransfer {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_mbs_session_id = <MbsSessionId>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1078,7 +1087,10 @@ impl rt::AperDecode for MulticastSessionUpdateRequestTransfer {
                 351 => rt::ie::set_once(&mut s_mbs_qos_flow_to_release_list, 351, ie.decode()?)?,
                 352 => rt::ie::set_once(&mut s_mbs_session_tnl_info5_gc, 352, ie.decode()?)?,
                 444 => rt::ie::set_once(&mut s_mbs_up_failure_indication, 444, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1172,7 +1184,7 @@ impl rt::AperDecode for MulticastGroupPagingAreaItem {
         let p_ie_extensions = r.read_bit()?;
         let v_multicast_group_paging_area = <MulticastGroupPagingArea>::aper_decode(r)?;
         let v_ue_paging_list = if p_ue_paging_list { Some(<UePagingList>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1240,7 +1252,7 @@ impl rt::AperDecode for MulticastGroupPagingArea {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_mbs_area_tai_list = <MbsAreaTaiList>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1316,7 +1328,7 @@ impl rt::AperDecode for UePagingItem {
         let p_ie_extensions = r.read_bit()?;
         let v_ue_identity_index_value = <UeIdentityIndexValue>::aper_decode(r)?;
         let v_paging_drx = if p_paging_drx { Some(<PagingDrx>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1373,7 +1385,10 @@ impl rt::AperDecode for M1ConfigurationExtIes {
             match ie.id {
                 340 => rt::ie::set_once(&mut s_include_beam_measurements_indication, 340, ie.decode()?)?,
                 361 => rt::ie::set_once(&mut s_beam_measurements_report_configuration, 361, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -1569,7 +1584,7 @@ impl rt::AperDecode for M1ThresholdEventA2 {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_m1_threshold_type = <M1ThresholdType>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1665,7 +1680,10 @@ impl rt::AperDecode for M1PeriodicReportingExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 285 => rt::ie::set_once(&mut s_extended_report_interval_mdt, 285, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -1771,7 +1789,10 @@ impl rt::AperDecode for M4ConfigurationExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 336 => rt::ie::set_once(&mut s_m4_report_amount, 336, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -1973,7 +1994,10 @@ impl rt::AperDecode for M5ConfigurationExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 337 => rt::ie::set_once(&mut s_m5_report_amount, 337, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -2183,7 +2207,10 @@ impl rt::AperDecode for M6ConfigurationExtIes {
             match ie.id {
                 338 => rt::ie::set_once(&mut s_m6_report_amount, 338, ie.decode()?)?,
                 341 => rt::ie::set_once(&mut s_excess_packet_delay_threshold_configuration, 341, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -2422,71 +2449,15 @@ impl rt::AperDecode for M7ConfigurationExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 339 => rt::ie::set_once(&mut s_m7_report_amount, 339, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
             m7_report_amount: s_m7_report_amount,
             unknown_ies,
-        })
-    }
-}
-
-/// ASN.1 `M7Configuration` (NGAP-IEs).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct M7Configuration {
-    /// `m7period`
-    pub m7period: M7period,
-    /// `m7-links-to-log`
-    pub m7_links_to_log: LinksToLog,
-    /// `iE-Extensions`
-    pub ie_extensions: Option<M7ConfigurationExtIes>,
-}
-
-impl M7Configuration {
-    /// A value with the mandatory components given and every optional one absent.
-    pub fn new(m7period: M7period, m7_links_to_log: LinksToLog) -> Self {
-        Self {
-            m7period,
-            m7_links_to_log,
-            ie_extensions: None,
-        }
-    }
-}
-
-impl rt::AperEncode for M7Configuration {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        w.write_bit(false); // extension marker: no additions
-        w.write_bit(self.ie_extensions.is_some());
-        {
-            let x = &self.m7period;
-            x.aper_encode(w)?;
-        }
-        {
-            let x = &self.m7_links_to_log;
-            x.aper_encode(w)?;
-        }
-        if let Some(x) = &self.ie_extensions {
-            x.aper_encode(w)?;
-        }
-        Ok(())
-    }
-}
-
-impl rt::AperDecode for M7Configuration {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let extension = r.read_bit()?;
-        let p_ie_extensions = r.read_bit()?;
-        let v_m7period = <M7period>::aper_decode(r)?;
-        let v_m7_links_to_log = <LinksToLog>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(<M7ConfigurationExtIes>::aper_decode(r)?) } else { None };
-        if extension {
-            r.read_extension_additions()?;
-        }
-        Ok(Self {
-            m7period: v_m7period,
-            m7_links_to_log: v_m7_links_to_log,
-            ie_extensions: v_ie_extensions,
         })
     }
 }

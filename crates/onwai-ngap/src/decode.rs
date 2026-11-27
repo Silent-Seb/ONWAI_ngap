@@ -1,6 +1,6 @@
 use ngap_aper::{
     AperError, BitReader, ErrorKind, from_slice,
-    ie::{Criticality, RawIe, read_procedure},
+    ie::{Criticality, RawIe, read_procedure, record_unknown_ies},
 };
 use ngap_types::{
     CriticalityDiagnostics, InitiatingMessage, NgapPdu, SuccessfulOutcome, TypeOfError,
@@ -77,8 +77,8 @@ pub fn decode_pdu(bytes: &[u8]) -> Result<Decoded, DecodeError> {
 /// Reports the errors of clause 10 that are detectable from the message alone:
 /// * 10.2 transfer syntax errors,
 /// * 10.3.4.1 a procedure code that is not defined,
-/// * 10.3.4.2 IEs that are not defined (the message's own IEs; for IEs nested in lists, the unknown ones stay in
-///   the `unknown_ies` of the item and are not examined),
+/// * 10.3.4.2 IEs that are not defined, at any depth: those of the message, of its list items and of extension
+///   containers (they also stay in the `unknown_ies` / `ie_extensions` of the value they came from),
 /// * 10.3.5 a missing mandatory IE (at any depth; the first one found is reported, and the typed message cannot
 ///   represent an absent mandatory IE, so this is an error whatever its criticality),
 /// * 10.3.6 IEs in the wrong order (top level of the message) or occurring too often (at any depth).
@@ -94,14 +94,17 @@ pub fn decode_pdu_with(bytes: &[u8], options: &DecodeOptions) -> Result<Decoded,
             });
         }
     };
-    let pdu = match from_slice::<NgapPdu>(bytes) {
+    // the decoders note every IE they do not know, at any depth: those of the message and of its list items and
+    // extension containers
+    let (decoded, not_known) = record_unknown_ies(|| from_slice::<NgapPdu>(bytes));
+    let pdu = match decoded {
         Ok(pdu) => pdu,
         Err(error) => return Err(classify(error, context)),
     };
 
     let mut rejected = Vec::new();
     let mut tolerated = Vec::new();
-    for ie in pdu.unknown_ies() {
+    for ie in &not_known {
         let issue = not_understood(ie);
         match ie.criticality {
             Criticality::Reject => rejected.push(issue),

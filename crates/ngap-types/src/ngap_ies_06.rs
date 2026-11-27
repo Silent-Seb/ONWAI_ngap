@@ -52,7 +52,7 @@ impl rt::AperDecode for GlobalCableIdNew {
         let p_ie_extensions = r.read_bit()?;
         let v_global_cable_id = <GlobalCableId>::aper_decode(r)?;
         let v_tai = <Tai>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -111,7 +111,7 @@ impl rt::AperDecode for GlobalEnbId {
         let p_ie_extensions = r.read_bit()?;
         let v_plm_nidentity = <PlmnIdentity>::aper_decode(r)?;
         let v_enb_id = <EnbId>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -170,7 +170,7 @@ impl rt::AperDecode for GlobalGnbId {
         let p_ie_extensions = r.read_bit()?;
         let v_plmn_identity = <PlmnIdentity>::aper_decode(r)?;
         let v_gnb_id = <GnbId>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -229,7 +229,7 @@ impl rt::AperDecode for GlobalN3IwfId {
         let p_ie_extensions = r.read_bit()?;
         let v_plmn_identity = <PlmnIdentity>::aper_decode(r)?;
         let v_n3_iwf_id = <N3IwfId>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -278,7 +278,10 @@ impl rt::AperDecode for GlobalLineIdExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 213 => rt::ie::set_once(&mut s_tai, 213, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -412,7 +415,7 @@ impl rt::AperDecode for GlobalNgEnbId {
         let p_ie_extensions = r.read_bit()?;
         let v_plmn_identity = <PlmnIdentity>::aper_decode(r)?;
         let v_ng_enb_id = <NgEnbId>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -455,7 +458,10 @@ impl rt::AperDecode for GlobalRanNodeIdExtIes {
             240 => Self::GlobalTngfId(ie.decode()?),
             241 => Self::GlobalTwifId(ie.decode()?),
             242 => Self::GlobalWAgfId(ie.decode()?),
-            _ => Self::Unknown(ie),
+            _ => {
+                rt::ie::note_unknown(&ie);
+                Self::Unknown(ie)
+            }
         })
     }
 }
@@ -555,7 +561,7 @@ impl rt::AperDecode for GlobalTngfId {
         let p_ie_extensions = r.read_bit()?;
         let v_plmn_identity = <PlmnIdentity>::aper_decode(r)?;
         let v_tngf_id = <TngfId>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -614,7 +620,7 @@ impl rt::AperDecode for GlobalTwifId {
         let p_ie_extensions = r.read_bit()?;
         let v_plmn_identity = <PlmnIdentity>::aper_decode(r)?;
         let v_twif_id = <TwifId>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -673,7 +679,7 @@ impl rt::AperDecode for GlobalWAgfId {
         let p_ie_extensions = r.read_bit()?;
         let v_plmn_identity = <PlmnIdentity>::aper_decode(r)?;
         let v_w_agf_id = <WAgfId>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -783,7 +789,7 @@ impl rt::AperDecode for GtpTunnel {
         let p_ie_extensions = r.read_bit()?;
         let v_transport_layer_address = <TransportLayerAddress>::aper_decode(r)?;
         let v_gtp_teid = <GtpTeid>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -858,7 +864,7 @@ impl rt::AperDecode for Guami {
         let v_amf_region_id = <AmfRegionId>::aper_decode(r)?;
         let v_amf_set_id = <AmfSetId>::aper_decode(r)?;
         let v_amf_pointer = <AmfPointer>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -958,7 +964,7 @@ impl rt::AperDecode for GuamiListItem {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_guami = <Guami>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1064,7 +1070,10 @@ impl rt::AperDecode for HandoverCommandTransferExtIes {
                 172 => rt::ie::set_once(&mut s_additional_ul_forwarding_uptnl_information, 172, ie.decode()?)?,
                 249 => rt::ie::set_once(&mut s_data_forwarding_response_erab_list, 249, ie.decode()?)?,
                 283 => rt::ie::set_once(&mut s_qos_flow_failed_to_setup_list, 283, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -1214,7 +1223,7 @@ impl rt::AperDecode for HandoverPreparationUnsuccessfulTransfer {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_cause = <Cause>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1334,7 +1343,10 @@ impl rt::AperDecode for HandoverRequestAcknowledgeTransferExtIes {
                 309 => rt::ie::set_once(&mut s_mbs_support_indicator, 309, ie.decode()?)?,
                 423 => rt::ie::set_once(&mut s_pdu_setbased_handling_indicator, 423, ie.decode()?)?,
                 426 => rt::ie::set_once(&mut s_ecn_markingor_congestion_information_reporting_status, 426, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -1492,7 +1504,7 @@ impl rt::AperDecode for HandoverRequiredTransfer {
         let p_direct_forwarding_path_availability = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_direct_forwarding_path_availability = if p_direct_forwarding_path_availability { Some(<DirectForwardingPathAvailability>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1551,7 +1563,7 @@ impl rt::AperDecode for HandoverResourceAllocationUnsuccessfulTransfer {
         let p_ie_extensions = r.read_bit()?;
         let v_cause = <Cause>::aper_decode(r)?;
         let v_criticality_diagnostics = if p_criticality_diagnostics { Some(<CriticalityDiagnostics>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1672,7 +1684,10 @@ impl rt::AperDecode for HfcNodeIdNewExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 275 => rt::ie::set_once(&mut s_global_cable_id, 275, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -1780,7 +1795,7 @@ impl rt::AperDecode for HlComActivate {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_nr_paging_long_edrx_information_for_rrc_inactive = <NrPagingLongEdrxInformationForRrcInactive>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1856,7 +1871,7 @@ impl rt::AperDecode for HlComDeactivate {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_ue_reachability_indication = <HlComDeactivateUeReachabilityIndication>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1954,7 +1969,10 @@ impl rt::AperDecode for HoReportExtIes {
                 366 => rt::ie::set_once(&mut s_extended_mobility_information, 366, ie.decode()?)?,
                 385 => rt::ie::set_once(&mut s_target_cell_crnti, 385, ie.decode()?)?,
                 386 => rt::ie::set_once(&mut s_time_since_failure, 386, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -2186,7 +2204,7 @@ impl rt::AperDecode for MobileIabMtUserLocationInformation {
         let p_ie_extensions = r.read_bit()?;
         let v_nrcgi = <NrCgi>::aper_decode(r)?;
         let v_tai = <Tai>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -2369,7 +2387,7 @@ impl rt::AperDecode for InfoOnRecommendedCellsAndRanNodesForPaging {
         let p_ie_extensions = r.read_bit()?;
         let v_recommended_cells_for_paging = <RecommendedCellsForPaging>::aper_decode(r)?;
         let v_recommend_ran_nodes_for_paging = <RecommendedRanNodesForPaging>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }

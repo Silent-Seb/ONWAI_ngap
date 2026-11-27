@@ -389,3 +389,66 @@ fn display_names_the_problem() {
     assert!(text.contains("60002"), "{text}");
     assert!(text.contains("not comprehended"), "{text}");
 }
+
+/// The NG Setup Request with `ies` as the extension IEs of its Global RAN Node ID (a nested container).
+fn setup_with_nested(ies: Vec<RawIe>) -> Vec<u8> {
+    let (mut pdu, _) = setup_request();
+    let NgapPdu::InitiatingMessage(InitiatingMessage::NgSetupRequest(m)) = &mut pdu else {
+        unreachable!()
+    };
+    let GlobalRanNodeId::GlobalGnbId(g) = &mut m.global_ran_node_id else {
+        unreachable!()
+    };
+    g.ie_extensions = Some(ngap_aper::ie::UnknownIes { ies });
+    encode_pdu(&pdu).unwrap()
+}
+
+#[test]
+fn a_nested_unknown_reject_ie_rejects_the_procedure() {
+    let bytes = setup_with_nested(vec![unknown(60001, Criticality::Reject)]);
+    let a = abstract_error(decode_pdu(&bytes).unwrap_err());
+    assert_eq!(a.context.procedure_code, NG_SETUP);
+    assert_eq!(a.issues.len(), 1);
+    assert_eq!(a.issues[0].ie_id, 60001);
+    assert_eq!(a.issues[0].criticality, Criticality::Reject);
+}
+
+#[test]
+fn a_nested_unknown_ignore_ie_is_tolerated_and_listed() {
+    let bytes = setup_with_nested(vec![unknown(60002, Criticality::Ignore)]);
+    let decoded = decode_pdu(&bytes).unwrap();
+    assert_eq!(decoded.issues.len(), 1);
+    assert_eq!(decoded.issues[0].ie_id, 60002);
+    assert!(!decoded.needs_report());
+}
+
+#[test]
+fn a_nested_unknown_notify_ie_must_be_reported() {
+    let bytes = setup_with_nested(vec![unknown(60003, Criticality::Notify)]);
+    let decoded = decode_pdu(&bytes).unwrap();
+    assert!(decoded.needs_report());
+    let d = decoded.criticality_diagnostics().unwrap();
+    assert_eq!(d.ies_criticality_diagnostics.unwrap().0.len(), 1);
+}
+
+#[test]
+fn top_level_and_nested_unknown_ies_are_both_found_and_repeats_are_listed_once() {
+    let (_, mut ies) = setup_request();
+    ies.push(unknown(60000, Criticality::Notify));
+    // the nested container sits inside the Global RAN Node ID IE: build the PDU from the typed value instead
+    let bytes = setup_with_nested(vec![
+        unknown(60004, Criticality::Notify),
+        unknown(60004, Criticality::Notify),
+    ]);
+    let decoded = decode_pdu(&bytes).unwrap();
+    assert_eq!(decoded.issues.len(), 2, "both occurrences are found");
+    let d = decoded.criticality_diagnostics().unwrap();
+    assert_eq!(
+        d.ies_criticality_diagnostics.unwrap().0.len(),
+        1,
+        "but the sender is told once"
+    );
+    // a top-level one next to it
+    let again = decode_pdu(&setup_with(&ies)).unwrap();
+    assert_eq!(again.issues.len(), 1);
+}

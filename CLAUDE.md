@@ -50,9 +50,10 @@ unless asked). The CI workflow's first result has not been checked. Open items, 
    require decode -> encode to be byte-identical. This is what would confirm ALIGNED PER against the field.
 2. **First CI run.** Push on a branch/draft PR and check `.github/workflows/ci.yml`; set the repo variable `NGAP_SPEC_URL` to
    enable the `spec` and `oracle` jobs (the spec docx is not vendored).
-3. **Clause 10 gaps in the facade** (`crates/onwai-ngap`): only the first problem is reported; unknown IEs nested inside list
-   items are not examined; conditional IEs that are present when they must not be, and logical errors (10.4), are not detected;
-   a missing mandatory IE is always an error (10.3.5 also distinguishes by criticality).
+3. **Clause 10 gaps in the facade** (`crates/onwai-ngap`), what is left: only the first problem is reported; a missing mandatory IE
+   is always an error (10.3.5 also distinguishes by criticality; the typed message cannot hold an absent field); conditional IEs
+   that are present when they must not be, and logical errors (10.4), need semantics/state. Done: unknown IEs at any depth are
+   examined (`ngap_aper::ie::record_unknown_ies`, hooked into the three generated sinks).
 4. ~~`cargo-fuzz` target~~ done: `fuzz/` (needs nightly, `cargo install cargo-fuzz`; see `fuzz/README.md`). Longer runs (hours) and a
    fuzz job in CI are still open.
 5. ~~Rust-side coverage of standalone types~~ done: `crates/ngap-types/tests/all_types.rs` via the generated `round_trip_by_name`.

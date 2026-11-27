@@ -59,7 +59,10 @@ impl rt::AperDecode for AdditionalDluptnlInformationForHoItemExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 183 => rt::ie::set_once(&mut s_additional_redundant_dl_ngu_up_tnl_information, 183, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -241,7 +244,7 @@ impl rt::AperDecode for AdditionalUli {
         let p_ie_extensions = r.read_bit()?;
         let v_nrcgi = <NrCgi>::aper_decode(r)?;
         let v_tai = <Tai>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -300,7 +303,7 @@ impl rt::AperDecode for A2xPc5FlowBitRates {
         let p_ie_extensions = r.read_bit()?;
         let v_a2x_guaranteed_flow_bit_rate = <BitRate>::aper_decode(r)?;
         let v_a2x_maximum_flow_bit_rate = <BitRate>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -444,7 +447,7 @@ impl rt::AperDecode for A2xPc5QosFlowItem {
         let v_a2x_pqi = r.read_int_as::<u8>(&rt::IntSpec::range(0, 255).extensible())?;
         let v_a2x_pc5_flow_bit_rates = if p_a2x_pc5_flow_bit_rates { Some(<A2xPc5FlowBitRates>::aper_decode(r)?) } else { None };
         let v_a2x_range = if p_a2x_range { Some(<A2xPc5QosFlowItemA2xRange>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -505,7 +508,7 @@ impl rt::AperDecode for A2xPc5QosParameters {
         let p_ie_extensions = r.read_bit()?;
         let v_a2x_pc5_qos_flow_list = <A2xPc5QosFlowList>::aper_decode(r)?;
         let v_a2x_pc5_link_aggregate_bit_rates = if p_a2x_pc5_link_aggregate_bit_rates { Some(<BitRate>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -573,7 +576,7 @@ impl rt::AperDecode for AdditionalCancelledlocationReportingReferenceIdItem {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_location_reporting_reference_id_to_be_cancelled = <LocationReportingReferenceId>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -640,7 +643,7 @@ impl rt::AperDecode for AiotAreaId {
         let v_plm_nidentity = <PlmnIdentity>::aper_decode(r)?;
         let v_nid = if p_nid { Some(<Nid>::aper_decode(r)?) } else { None };
         let v_a_iot_area_code = r.read_octet_string(rt::Size::fixed(3))?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -750,7 +753,7 @@ impl rt::AperDecode for AiotCommandAssistanceInformation {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_estimateof_expected_d2_r_msg_size = r.read_int_as::<u16>(&rt::IntSpec::range(1, 256).extensible())?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -871,7 +874,7 @@ impl rt::AperDecode for AiotDeviceReportItem {
         let p_ie_extensions = r.read_bit()?;
         let v_a_iot_naspdu = <AiotNaspdu>::aper_decode(r)?;
         let v_ran_aiot_device_ngap_id = if p_ran_aiot_device_ngap_id { Some(<RanAiotDeviceNgapId>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -949,7 +952,7 @@ impl rt::AperDecode for AiotfName {
         let p_ie_extensions = r.read_bit()?;
         let v_aiotf_name_visible_string = if p_aiotf_name_visible_string { Some(<AiotfNameVisibleString>::aper_decode(r)?) } else { None };
         let v_aiotf_name_utf8_string = if p_aiotf_name_utf8_string { Some(<AiotfNameUtf8String>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1052,7 +1055,7 @@ impl rt::AperDecode for AiotInventoryAssistanceInformation {
         let v_expected_d2_r_msg_size = r.read_int_as::<u16>(&rt::IntSpec::range(1, 256).extensible())?;
         let v_approximate_noof_target_devices = if p_approximate_noof_target_devices { Some(r.read_int_as::<u16>(&rt::IntSpec::range(1, 65535).extensible())?) } else { None };
         let v_time_interval = if p_time_interval { Some(r.read_int_as::<u16>(&rt::IntSpec::range(1, 256).extensible())?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1180,7 +1183,7 @@ impl rt::AperDecode for AiotReaderReportItem {
         let p_ie_extensions = r.read_bit()?;
         let v_reader_index = <AiotReaderIndex>::aper_decode(r)?;
         let v_device_report_list = <AiotDeviceReportList>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1272,7 +1275,7 @@ impl rt::AperDecode for AiotRequestedReaderItem {
         let p_ie_extensions = r.read_bit()?;
         let v_globalg_nb_id = <GlobalGnbId>::aper_decode(r)?;
         let v_reader_index = <AiotReaderIndex>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1350,7 +1353,7 @@ impl rt::AperDecode for AiotRequestedServiceAreaInformation {
         let p_ie_extensions = r.read_bit()?;
         let v_requested_reader_list = if p_requested_reader_list { Some(<AiotRequestedReaderList>::aper_decode(r)?) } else { None };
         let v_requested_aiot_area_list = if p_requested_aiot_area_list { Some(<AiotRequestedAiotAreaList>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1411,7 +1414,10 @@ impl rt::AperDecode for AiotSessionReleaseCommandTransfer {
             match ie.id {
                 466 => rt::ie::set_once(&mut s_aiot_correlation_identifier, 466, ie.decode()?)?,
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1484,7 +1490,7 @@ impl rt::AperDecode for AiotSessionReleaseCompleteTransfer {
         let p_ie_extensions = r.read_bit()?;
         let v_correlation_identifier = <AiotCorrelationIdentifier>::aper_decode(r)?;
         let v_criticality_diagnostics = if p_criticality_diagnostics { Some(<CriticalityDiagnostics>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1543,7 +1549,7 @@ impl rt::AperDecode for AiotSessionReleaseRequestTransfer {
         let p_ie_extensions = r.read_bit()?;
         let v_correlation_identifier = <AiotCorrelationIdentifier>::aper_decode(r)?;
         let v_cause = <Cause>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1640,7 +1646,7 @@ impl rt::AperDecode for AllocationAndRetentionPriority {
         let v_priority_level_arp = <PriorityLevelArp>::aper_decode(r)?;
         let v_pre_emption_capability = <PreEmptionCapability>::aper_decode(r)?;
         let v_pre_emption_vulnerability = <PreEmptionVulnerability>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1726,7 +1732,7 @@ impl rt::AperDecode for AllowedNssaiItem {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_s_nssai = <SNssai>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1839,7 +1845,7 @@ impl rt::AperDecode for AllowedPniNpnItem {
         let v_plmn_identity = <PlmnIdentity>::aper_decode(r)?;
         let v_pni_npn_restricted = <AllowedPniNpnItemPniNpnRestricted>::aper_decode(r)?;
         let v_allowed_cag_list_per_plmn = <AllowedCagListPerPlmn>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1987,7 +1993,10 @@ impl rt::AperDecode for AlternativeQosParaSetItemExtIes {
                 485 => rt::ie::set_once(&mut s_pdu_set_delay_budget_uplink, 485, ie.decode()?)?,
                 486 => rt::ie::set_once(&mut s_pdu_set_error_rate_downlink, 486, ie.decode()?)?,
                 487 => rt::ie::set_once(&mut s_pdu_set_error_rate_uplink, 487, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -2306,7 +2315,7 @@ impl rt::AperDecode for AmfTnlAssociationSetupItem {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_amf_tnl_association_address = <CpTransportLayerInformation>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -2390,7 +2399,7 @@ impl rt::AperDecode for AmfTnlAssociationToAddItem {
         let v_amf_tnl_association_address = <CpTransportLayerInformation>::aper_decode(r)?;
         let v_tnl_association_usage = if p_tnl_association_usage { Some(<TnlAssociationUsage>::aper_decode(r)?) } else { None };
         let v_tnl_address_weight_factor = <TnlAddressWeightFactor>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -2457,7 +2466,10 @@ impl rt::AperDecode for AmfTnlAssociationToRemoveItemExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 168 => rt::ie::set_once(&mut s_tnl_association_transport_layer_address_ngran, 168, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {

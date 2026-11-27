@@ -129,7 +129,7 @@ impl rt::AperDecode for AmfTnlAssociationToUpdateItem {
         let v_amf_tnl_association_address = <CpTransportLayerInformation>::aper_decode(r)?;
         let v_tnl_association_usage = if p_tnl_association_usage { Some(<TnlAssociationUsage>::aper_decode(r)?) } else { None };
         let v_tnl_address_weight_factor = if p_tnl_address_weight_factor { Some(<TnlAddressWeightFactor>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -216,7 +216,7 @@ impl rt::AperDecode for AreaOfInterest {
         let v_area_of_interest_tai_list = if p_area_of_interest_tai_list { Some(<AreaOfInterestTaiList>::aper_decode(r)?) } else { None };
         let v_area_of_interest_cell_list = if p_area_of_interest_cell_list { Some(<AreaOfInterestCellList>::aper_decode(r)?) } else { None };
         let v_area_of_interest_ran_node_list = if p_area_of_interest_ran_node_list { Some(<AreaOfInterestRanNodeList>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -285,7 +285,7 @@ impl rt::AperDecode for AreaOfInterestCellItem {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_ngran_cgi = <NgranCgi>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -360,7 +360,7 @@ impl rt::AperDecode for AreaOfInterestItem {
         let p_ie_extensions = r.read_bit()?;
         let v_area_of_interest = <AreaOfInterest>::aper_decode(r)?;
         let v_location_reporting_reference_id = <LocationReportingReferenceId>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -428,7 +428,7 @@ impl rt::AperDecode for AreaOfInterestRanNodeItem {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_global_ran_node_id = <GlobalRanNodeId>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -495,7 +495,7 @@ impl rt::AperDecode for AreaOfInterestTaiItem {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_tai = <Tai>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -551,7 +551,10 @@ impl rt::AperDecode for AssistanceDataForPagingExtIes {
             match ie.id {
                 260 => rt::ie::set_once(&mut s_npn_paging_assistance_information, 260, ie.decode()?)?,
                 207 => rt::ie::set_once(&mut s_paging_assis_datafor_c_ecapab_ue, 207, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -662,7 +665,7 @@ impl rt::AperDecode for AssistanceDataForRecommendedCells {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_recommended_cells_for_paging = <RecommendedCellsForPaging>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -737,7 +740,7 @@ impl rt::AperDecode for AssociatedMbsQosFlowSetupRequestItem {
         let p_ie_extensions = r.read_bit()?;
         let v_mbs_qos_flow_identifier = <QosFlowIdentifier>::aper_decode(r)?;
         let v_associated_unicast_qos_flow_identifier = <QosFlowIdentifier>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -813,7 +816,7 @@ impl rt::AperDecode for AssociatedMbsQosFlowSetuporModifyRequestItem {
         let p_ie_extensions = r.read_bit()?;
         let v_mbs_qos_flow_identifier = <QosFlowIdentifier>::aper_decode(r)?;
         let v_associated_unicast_qos_flow_identifier = <QosFlowIdentifier>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -909,7 +912,10 @@ impl rt::AperDecode for AssociatedQosFlowItemExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 221 => rt::ie::set_once(&mut s_current_qos_para_set_index, 221, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -1099,7 +1105,7 @@ impl rt::AperDecode for Aun3DeviceAccessInfo {
         let p_ie_extensions = r.read_bit()?;
         let v_aun3_device_access = <Aun3DeviceAccessInfoAun3DeviceAccess>::aper_decode(r)?;
         let v_existing_ng_connectionwith_same_location = <Aun3DeviceAccessInfoExistingNgConnectionwithSameLocation>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1192,7 +1198,10 @@ impl rt::AperDecode for AreaScopeOfMdtNrExtIes {
             412 => Self::SnpnTaiBasedMdt(ie.decode()?),
             413 => Self::SnpnBasedMdt(ie.decode()?),
             448 => Self::GeographyBasedMdt(ie.decode()?),
-            _ => Self::Unknown(ie),
+            _ => {
+                rt::ie::note_unknown(&ie);
+                Self::Unknown(ie)
+            }
         })
     }
 }
@@ -1366,7 +1375,7 @@ impl rt::AperDecode for AreaScopeOfNeighCellsItem {
         let p_ie_extensions = r.read_bit()?;
         let v_nr_frequency_info = <NrFrequencyInfo>::aper_decode(r)?;
         let v_pci_list_for_mdt = if p_pci_list_for_mdt { Some(<PciListForMdt>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1489,7 +1498,7 @@ impl rt::AperDecode for AvailableBitrateReportThresholdItem {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_reporting_threshold = <ReportingThreshold>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1601,7 +1610,7 @@ impl rt::AperDecode for AvailableRanVisibleQoeMetrics {
         let p_ie_extensions = r.read_bit()?;
         let v_application_layer_buffer_level_list = if p_application_layer_buffer_level_list { Some(<AvailableRanVisibleQoeMetricsApplicationLayerBufferLevelList>::aper_decode(r)?) } else { None };
         let v_playout_delay_for_media_startup = if p_playout_delay_for_media_startup { Some(<AvailableRanVisibleQoeMetricsPlayoutDelayForMediaStartup>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1662,7 +1671,7 @@ impl rt::AperDecode for BeamMeasurementsReportConfiguration {
         let p_ie_extensions = r.read_bit()?;
         let v_beam_measurements_report_quantity = if p_beam_measurements_report_quantity { Some(<BeamMeasurementsReportQuantity>::aper_decode(r)?) } else { None };
         let v_max_nrof_rs_indexes_to_report = if p_max_nrof_rs_indexes_to_report { Some(<MaxNrofRsIndexesToReport>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1819,7 +1828,7 @@ impl rt::AperDecode for BeamMeasurementsReportQuantity {
         let v_rsrp = <BeamMeasurementsReportQuantityRsrp>::aper_decode(r)?;
         let v_rsrq = <BeamMeasurementsReportQuantityRsrq>::aper_decode(r)?;
         let v_sinr = <BeamMeasurementsReportQuantitySinr>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -2056,7 +2065,10 @@ impl rt::AperDecode for BroadcastPlmnItemExtIes {
                 258 => rt::ie::set_once(&mut s_npn_support, 258, ie.decode()?)?,
                 271 => rt::ie::set_once(&mut s_extended_tai_slice_support_list, 271, ie.decode()?)?,
                 353 => rt::ie::set_once(&mut s_tainsag_support_list, 353, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -2183,7 +2195,7 @@ impl rt::AperDecode for BroadcastTransportFailureTransfer {
         let v_mbs_session_id = <MbsSessionId>::aper_decode(r)?;
         let v_cause = <Cause>::aper_decode(r)?;
         let v_criticality_diagnostics = if p_criticality_diagnostics { Some(<CriticalityDiagnostics>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -2243,7 +2255,7 @@ impl rt::AperDecode for BroadcastTransportRequestTransfer {
         let p_ie_extensions = r.read_bit()?;
         let v_mbs_session_id = <MbsSessionId>::aper_decode(r)?;
         let v_mbs_session_tnl_info_ngran = <MbsSessionTnlInfoNgran>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -2294,7 +2306,7 @@ impl rt::AperDecode for BroadcastTransportResponseTransfer {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_mbs_session_id = <MbsSessionId>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -2388,7 +2400,7 @@ impl rt::AperDecode for BluetoothMeasurementConfiguration {
         let v_bluetooth_meas_config = <BluetoothMeasConfig>::aper_decode(r)?;
         let v_bluetooth_meas_config_name_list = if p_bluetooth_meas_config_name_list { Some(<BluetoothMeasConfigNameList>::aper_decode(r)?) } else { None };
         let v_bt_rssi = if p_bt_rssi { Some(<BluetoothMeasurementConfigurationBtRssi>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -2457,39 +2469,13 @@ impl rt::AperDecode for BluetoothMeasConfigNameItem {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_bluetooth_name = <BluetoothName>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
         Ok(Self {
             bluetooth_name: v_bluetooth_name,
             ie_extensions: v_ie_extensions,
-        })
-    }
-}
-
-/// ASN.1 `BluetoothMeasConfig` (NGAP-IEs).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[non_exhaustive]
-pub enum BluetoothMeasConfig {
-    /// `setup`
-    Setup,
-}
-
-impl rt::AperEncode for BluetoothMeasConfig {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        let index: u64 = match self {
-            Self::Setup => 0,
-        };
-        w.write_index(index, 1, true)
-    }
-}
-
-impl rt::AperDecode for BluetoothMeasConfig {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        Ok(match r.read_index(1, true)? {
-            0 => Self::Setup,
-            i => return Err(r.error(rt::ErrorKind::InvalidIndex(i))),
         })
     }
 }

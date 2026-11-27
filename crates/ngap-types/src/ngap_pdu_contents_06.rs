@@ -5,6 +5,197 @@ use ngap_aper as rt;
 use rt::{AperDecode as _, AperEncode as _};
 use crate::*;
 
+/// ASN.1 `MTCommunicationHandlingFailure` (NGAP-PDU-Contents): the IEs of the message are the fields.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MtCommunicationHandlingFailure {
+    /// `id-AMF-UE-NGAP-ID` (id 10, Reject, Mandatory)
+    pub amf_ue_ngap_id: AmfUeNgapId,
+    /// `id-RAN-UE-NGAP-ID` (id 85, Reject, Mandatory)
+    pub ran_ue_ngap_id: RanUeNgapId,
+    /// `id-Cause` (id 15, Ignore, Mandatory)
+    pub cause: Cause,
+    /// `id-CriticalityDiagnostics` (id 19, Ignore, Optional)
+    pub criticality_diagnostics: Option<CriticalityDiagnostics>,
+    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
+    pub unknown_ies: Vec<rt::ie::RawIe>,
+}
+
+impl MtCommunicationHandlingFailure {
+    /// A value with the mandatory IEs given and every optional one absent.
+    pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId, cause: Cause) -> Self {
+        Self {
+            amf_ue_ngap_id,
+            ran_ue_ngap_id,
+            cause,
+            criticality_diagnostics: None,
+            unknown_ies: Vec::new(),
+        }
+    }
+}
+
+impl rt::AperEncode for MtCommunicationHandlingFailure {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        w.write_bit(false); // extension marker: no additions
+        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
+        {
+            let x = &self.amf_ue_ngap_id;
+            ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Reject, x)?);
+        }
+        {
+            let x = &self.ran_ue_ngap_id;
+            ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Reject, x)?);
+        }
+        {
+            let x = &self.cause;
+            ies.push(rt::ie::RawIe::new(15, rt::ie::Criticality::Ignore, x)?);
+        }
+        if let Some(x) = &self.criticality_diagnostics {
+            ies.push(rt::ie::RawIe::new(19, rt::ie::Criticality::Ignore, x)?);
+        }
+        ies.extend(self.unknown_ies.iter().cloned());
+        rt::ie::write_container(w, rt::Size::range(0, 65535), &ies)
+    }
+}
+
+impl rt::AperDecode for MtCommunicationHandlingFailure {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let extension = r.read_bit()?;
+        let mut s_amf_ue_ngap_id: Option<AmfUeNgapId> = None;
+        let mut s_ran_ue_ngap_id: Option<RanUeNgapId> = None;
+        let mut s_cause: Option<Cause> = None;
+        let mut s_criticality_diagnostics: Option<CriticalityDiagnostics> = None;
+        let mut unknown_ies = Vec::new();
+        for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
+            match ie.id {
+                10 => rt::ie::set_once(&mut s_amf_ue_ngap_id, 10, ie.decode()?)?,
+                85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
+                15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
+                19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
+            }
+        }
+        if extension {
+            r.read_extension_additions()?;
+        }
+        Ok(Self {
+            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Reject)?,
+            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Reject)?,
+            cause: rt::ie::required(s_cause, 15, rt::ie::Criticality::Ignore)?,
+            criticality_diagnostics: s_criticality_diagnostics,
+            unknown_ies,
+        })
+    }
+}
+
+impl MtCommunicationHandlingFailure {
+    /// The ids of the IEs this version of the specification defines for the message, in the order the
+    /// specification requires them on the wire.
+    pub const IE_IDS: &'static [u32] = &[10, 85, 15, 19];
+
+    /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
+    pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {
+        rt::ie::wire_ie_ids(content, true, rt::Size::range(0, 65535))
+    }
+}
+
+/// ASN.1 `RANPagingRequest` (NGAP-PDU-Contents): the IEs of the message are the fields.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RanPagingRequest {
+    /// `id-AMF-UE-NGAP-ID` (id 10, Ignore, Mandatory)
+    pub amf_ue_ngap_id: AmfUeNgapId,
+    /// `id-RAN-UE-NGAP-ID` (id 85, Ignore, Mandatory)
+    pub ran_ue_ngap_id: RanUeNgapId,
+    /// `id-PagingPolicyDifferentiation` (id 407, Ignore, Optional)
+    pub paging_policy_differentiation: Option<PagingPolicyDifferentiation>,
+    /// `id-DL-Signalling` (id 408, Ignore, Optional)
+    pub dl_signalling: Option<DlSignalling>,
+    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
+    pub unknown_ies: Vec<rt::ie::RawIe>,
+}
+
+impl RanPagingRequest {
+    /// A value with the mandatory IEs given and every optional one absent.
+    pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId) -> Self {
+        Self {
+            amf_ue_ngap_id,
+            ran_ue_ngap_id,
+            paging_policy_differentiation: None,
+            dl_signalling: None,
+            unknown_ies: Vec::new(),
+        }
+    }
+}
+
+impl rt::AperEncode for RanPagingRequest {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        w.write_bit(false); // extension marker: no additions
+        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
+        {
+            let x = &self.amf_ue_ngap_id;
+            ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Ignore, x)?);
+        }
+        {
+            let x = &self.ran_ue_ngap_id;
+            ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Ignore, x)?);
+        }
+        if let Some(x) = &self.paging_policy_differentiation {
+            ies.push(rt::ie::RawIe::new(407, rt::ie::Criticality::Ignore, x)?);
+        }
+        if let Some(x) = &self.dl_signalling {
+            ies.push(rt::ie::RawIe::new(408, rt::ie::Criticality::Ignore, x)?);
+        }
+        ies.extend(self.unknown_ies.iter().cloned());
+        rt::ie::write_container(w, rt::Size::range(0, 65535), &ies)
+    }
+}
+
+impl rt::AperDecode for RanPagingRequest {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let extension = r.read_bit()?;
+        let mut s_amf_ue_ngap_id: Option<AmfUeNgapId> = None;
+        let mut s_ran_ue_ngap_id: Option<RanUeNgapId> = None;
+        let mut s_paging_policy_differentiation: Option<PagingPolicyDifferentiation> = None;
+        let mut s_dl_signalling: Option<DlSignalling> = None;
+        let mut unknown_ies = Vec::new();
+        for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
+            match ie.id {
+                10 => rt::ie::set_once(&mut s_amf_ue_ngap_id, 10, ie.decode()?)?,
+                85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
+                407 => rt::ie::set_once(&mut s_paging_policy_differentiation, 407, ie.decode()?)?,
+                408 => rt::ie::set_once(&mut s_dl_signalling, 408, ie.decode()?)?,
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
+            }
+        }
+        if extension {
+            r.read_extension_additions()?;
+        }
+        Ok(Self {
+            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Ignore)?,
+            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Ignore)?,
+            paging_policy_differentiation: s_paging_policy_differentiation,
+            dl_signalling: s_dl_signalling,
+            unknown_ies,
+        })
+    }
+}
+
+impl RanPagingRequest {
+    /// The ids of the IEs this version of the specification defines for the message, in the order the
+    /// specification requires them on the wire.
+    pub const IE_IDS: &'static [u32] = &[10, 85, 407, 408];
+
+    /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
+    pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {
+        rt::ie::wire_ie_ids(content, true, rt::Size::range(0, 65535))
+    }
+}
+
 /// ASN.1 `InventoryRequest` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InventoryRequest {
@@ -63,7 +254,10 @@ impl rt::AperDecode for InventoryRequest {
                 467 => rt::ie::set_once(&mut s_aiotf_identifier, 467, ie.decode()?)?,
                 466 => rt::ie::set_once(&mut s_aiot_correlation_identifier, 466, ie.decode()?)?,
                 456 => rt::ie::set_once(&mut s_inventory_request_transfer, 456, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -155,7 +349,10 @@ impl rt::AperDecode for InventoryResponse {
                 466 => rt::ie::set_once(&mut s_aiot_correlation_identifier, 466, ie.decode()?)?,
                 457 => rt::ie::set_once(&mut s_inventory_response_transfer, 457, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -257,7 +454,10 @@ impl rt::AperDecode for InventoryFailure {
                 458 => rt::ie::set_once(&mut s_inventory_failure_transfer, 458, ie.decode()?)?,
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -343,7 +543,10 @@ impl rt::AperDecode for InventoryReport {
                 467 => rt::ie::set_once(&mut s_aiotf_identifier, 467, ie.decode()?)?,
                 466 => rt::ie::set_once(&mut s_aiot_correlation_identifier, 466, ie.decode()?)?,
                 459 => rt::ie::set_once(&mut s_inventory_report_transfer, 459, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -436,7 +639,10 @@ impl rt::AperDecode for CommandRequest {
                 466 => rt::ie::set_once(&mut s_aiot_correlation_identifier, 466, ie.decode()?)?,
                 472 => rt::ie::set_once(&mut s_ran_aiot_device_ngap_id, 472, ie.decode()?)?,
                 460 => rt::ie::set_once(&mut s_command_request_transfer, 460, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -538,7 +744,10 @@ impl rt::AperDecode for CommandResponse {
                 472 => rt::ie::set_once(&mut s_ran_aiot_device_ngap_id, 472, ie.decode()?)?,
                 461 => rt::ie::set_once(&mut s_command_response_transfer, 461, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -650,7 +859,10 @@ impl rt::AperDecode for CommandFailure {
                 462 => rt::ie::set_once(&mut s_command_failure_transfer, 462, ie.decode()?)?,
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -737,7 +949,10 @@ impl rt::AperDecode for AiotSessionReleaseCommand {
                 467 => rt::ie::set_once(&mut s_aiotf_identifier, 467, ie.decode()?)?,
                 466 => rt::ie::set_once(&mut s_aiot_correlation_identifier, 466, ie.decode()?)?,
                 463 => rt::ie::set_once(&mut s_aiot_session_release_command_transfer, 463, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -829,7 +1044,10 @@ impl rt::AperDecode for AiotSessionReleaseComplete {
                 466 => rt::ie::set_once(&mut s_aiot_correlation_identifier, 466, ie.decode()?)?,
                 464 => rt::ie::set_once(&mut s_aiot_session_release_complete_transfer, 464, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -914,7 +1132,10 @@ impl rt::AperDecode for AiotSessionReleaseRequest {
                 467 => rt::ie::set_once(&mut s_aiotf_identifier, 467, ie.decode()?)?,
                 466 => rt::ie::set_once(&mut s_aiot_correlation_identifier, 466, ie.decode()?)?,
                 465 => rt::ie::set_once(&mut s_aiot_session_release_request_transfer, 465, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {

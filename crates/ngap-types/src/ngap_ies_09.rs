@@ -5,6 +5,23 @@ use ngap_aper as rt;
 use rt::{AperDecode as _, AperEncode as _};
 use crate::*;
 
+/// ASN.1 `MBS-QoSFlowList` (NGAP-IEs).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MbsQosFlowList(pub Vec<QosFlowIdentifier>);
+
+impl rt::AperEncode for MbsQosFlowList {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        let x = &self.0;
+        w.write_seq_of(x, rt::Size::range(1, 64), |w, x| x.aper_encode(w))
+    }
+}
+
+impl rt::AperDecode for MbsQosFlowList {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        Ok(Self(r.read_seq_of(rt::Size::range(1, 64), |r| <QosFlowIdentifier>::aper_decode(r))?))
+    }
+}
+
 /// ASN.1 `MRB-ProgressInformation` (NGAP-IEs).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MrbProgressInformation {
@@ -110,7 +127,7 @@ impl rt::AperDecode for MbsQosFlowsToBeSetupItem {
         let p_ie_extensions = r.read_bit()?;
         let v_mb_sqos_flow_identifier = <QosFlowIdentifier>::aper_decode(r)?;
         let v_mb_sqos_flow_level_qos_parameters = <QosFlowLevelQosParameters>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -227,7 +244,7 @@ impl rt::AperDecode for MbsServiceAreaInformationItem {
         let p_ie_extensions = r.read_bit()?;
         let v_mbs_area_session_id = <MbsAreaSessionId>::aper_decode(r)?;
         let v_mbs_service_area_information = <MbsServiceAreaInformation>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -276,7 +293,10 @@ impl rt::AperDecode for MbsServiceAreaInformationExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 449 => rt::ie::set_once(&mut s_mbs_intended_service_area_list, 449, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -463,7 +483,7 @@ impl rt::AperDecode for MbsSessionId {
         let p_ie_extensions = r.read_bit()?;
         let v_tmgi = <Tmgi>::aper_decode(r)?;
         let v_nid = if p_nid { Some(<Nid>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -548,7 +568,7 @@ impl rt::AperDecode for MbsSessionFailedtoSetupItem {
         let v_mbs_session_id = <MbsSessionId>::aper_decode(r)?;
         let v_mbs_area_session_id = if p_mbs_area_session_id { Some(<MbsAreaSessionId>::aper_decode(r)?) } else { None };
         let v_cause = <Cause>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -652,7 +672,7 @@ impl rt::AperDecode for MbsActiveSessionInformationSourcetoTargetItem {
         let v_mbs_service_area = if p_mbs_service_area { Some(<MbsServiceArea>::aper_decode(r)?) } else { None };
         let v_mbs_qos_flows_to_be_setup_list = <MbsQosFlowsToBeSetupList>::aper_decode(r)?;
         let v_mbs_mappingand_data_forwarding_request_list = if p_mbs_mappingand_data_forwarding_request_list { Some(<MbsMappingandDataForwardingRequestList>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -732,7 +752,7 @@ impl rt::AperDecode for MbsActiveSessionInformationTargettoSourceItem {
         let p_ie_extensions = r.read_bit()?;
         let v_mbs_session_id = <MbsSessionId>::aper_decode(r)?;
         let v_mbs_data_forwarding_response_mrb_list = if p_mbs_data_forwarding_response_mrb_list { Some(<MbsDataForwardingResponseMrbList>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -818,7 +838,7 @@ impl rt::AperDecode for MbsSessionSetupOrModFailureTransfer {
         let p_ie_extensions = r.read_bit()?;
         let v_cause = <Cause>::aper_decode(r)?;
         let v_criticality_diagnostics = if p_criticality_diagnostics { Some(<CriticalityDiagnostics>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -895,7 +915,7 @@ impl rt::AperDecode for MbsSessionSetupResponseItem {
         let p_ie_extensions = r.read_bit()?;
         let v_mbs_session_id = <MbsSessionId>::aper_decode(r)?;
         let v_mbs_area_session_id = if p_mbs_area_session_id { Some(<MbsAreaSessionId>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -979,7 +999,10 @@ impl rt::AperDecode for MbsSessionSetupOrModRequestTransfer {
                 357 => rt::ie::set_once(&mut s_mbs_session_fsaid_list, 357, ie.decode()?)?,
                 372 => rt::ie::set_once(&mut s_supported_ue_type_list, 372, ie.decode()?)?,
                 434 => rt::ie::set_once(&mut s_mbs_ngu_failure_indication, 434, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1128,7 +1151,7 @@ impl rt::AperDecode for MbsSessionReleaseResponseTransfer {
         let p_mbs_session_tnl_info_ngran = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_mbs_session_tnl_info_ngran = if p_mbs_session_tnl_info_ngran { Some(<MbsSessionTnlInfoNgran>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1179,7 +1202,7 @@ impl rt::AperDecode for MbsSessionSetupOrModResponseTransfer {
         let p_mbs_session_tnl_info_ngran = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_mbs_session_tnl_info_ngran = if p_mbs_session_tnl_info_ngran { Some(<MbsSessionTnlInfoNgran>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1325,7 +1348,7 @@ impl rt::AperDecode for MbsSessionTnlInfo5GcItem {
         let p_ie_extensions = r.read_bit()?;
         let v_mbs_area_session_id = <MbsAreaSessionId>::aper_decode(r)?;
         let v_shared_ngu_multicast_tnl_information = <SharedNguMulticastTnlInformation>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1443,7 +1466,7 @@ impl rt::AperDecode for MbsSessionTnlInfoNgranItem {
         let p_ie_extensions = r.read_bit()?;
         let v_mbs_area_session_id = <MbsAreaSessionId>::aper_decode(r)?;
         let v_shared_ngu_unicast_tnl_information = if p_shared_ngu_unicast_tnl_information { Some(<UpTransportLayerInformation>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1520,7 +1543,7 @@ impl rt::AperDecode for MbsDistributionReleaseRequestTransfer {
         let v_mbs_area_session_id = if p_mbs_area_session_id { Some(<MbsAreaSessionId>::aper_decode(r)?) } else { None };
         let v_shared_ngu_unicast_tnl_information = if p_shared_ngu_unicast_tnl_information { Some(<UpTransportLayerInformation>::aper_decode(r)?) } else { None };
         let v_cause = <Cause>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1571,7 +1594,10 @@ impl rt::AperDecode for MbsDistributionSetupRequestTransferExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 441 => rt::ie::set_once(&mut s_taimbs_support_list, 441, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -1733,7 +1759,7 @@ impl rt::AperDecode for MbsDistributionSetupResponseTransfer {
         let v_mbs_qos_flows_to_be_setup_list = <MbsQosFlowsToBeSetupList>::aper_decode(r)?;
         let v_mbs_session_status = <MbsSessionStatus>::aper_decode(r)?;
         let v_mbs_service_area = if p_mbs_service_area { Some(<MbsServiceArea>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1814,7 +1840,7 @@ impl rt::AperDecode for MbsDistributionSetupUnsuccessfulTransfer {
         let v_mbs_area_session_id = if p_mbs_area_session_id { Some(<MbsAreaSessionId>::aper_decode(r)?) } else { None };
         let v_cause = <Cause>::aper_decode(r)?;
         let v_criticality_diagnostics = if p_criticality_diagnostics { Some(<CriticalityDiagnostics>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1933,7 +1959,7 @@ impl rt::AperDecode for MbsUpFailureIndicationItem {
         let p_ie_extensions = r.read_bit()?;
         let v_mbs_area_session_id = <MbsAreaSessionId>::aper_decode(r)?;
         let v_mbs_up_failure_indication = <MbsUpFailureIndication>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -2025,7 +2051,10 @@ impl rt::AperDecode for MbsSessionSetupRequestItemExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 416 => rt::ie::set_once(&mut s_mbs_assistance_information, 416, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -2159,7 +2188,10 @@ impl rt::AperDecode for MbsSessionSetuporModifyRequestItemExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 416 => rt::ie::set_once(&mut s_mbs_assistance_information, 416, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -2313,7 +2345,7 @@ impl rt::AperDecode for MbsSessionToReleaseItem {
         let p_ie_extensions = r.read_bit()?;
         let v_mbs_session_id = <MbsSessionId>::aper_decode(r)?;
         let v_cause = <Cause>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }

@@ -5,6 +5,303 @@ use ngap_aper as rt;
 use rt::{AperDecode as _, AperEncode as _};
 use crate::*;
 
+/// ASN.1 `Threshold-SINR` (NGAP-IEs).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct ThresholdSinr(pub u8);
+
+impl rt::AperEncode for ThresholdSinr {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        w.write_int(i128::from(self.0), &rt::IntSpec::range(0, 127))
+    }
+}
+
+impl rt::AperDecode for ThresholdSinr {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        Ok(Self(r.read_int_as::<u8>(&rt::IntSpec::range(0, 127))?))
+    }
+}
+
+/// ASN.1 `TimeToTrigger` (NGAP-IEs).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TimeToTrigger {
+    /// `ms0`
+    Ms0,
+    /// `ms40`
+    Ms40,
+    /// `ms64`
+    Ms64,
+    /// `ms80`
+    Ms80,
+    /// `ms100`
+    Ms100,
+    /// `ms128`
+    Ms128,
+    /// `ms160`
+    Ms160,
+    /// `ms256`
+    Ms256,
+    /// `ms320`
+    Ms320,
+    /// `ms480`
+    Ms480,
+    /// `ms512`
+    Ms512,
+    /// `ms640`
+    Ms640,
+    /// `ms1024`
+    Ms1024,
+    /// `ms1280`
+    Ms1280,
+    /// `ms2560`
+    Ms2560,
+    /// `ms5120`
+    Ms5120,
+}
+
+impl rt::AperEncode for TimeToTrigger {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        let index: u64 = match self {
+            Self::Ms0 => 0,
+            Self::Ms40 => 1,
+            Self::Ms64 => 2,
+            Self::Ms80 => 3,
+            Self::Ms100 => 4,
+            Self::Ms128 => 5,
+            Self::Ms160 => 6,
+            Self::Ms256 => 7,
+            Self::Ms320 => 8,
+            Self::Ms480 => 9,
+            Self::Ms512 => 10,
+            Self::Ms640 => 11,
+            Self::Ms1024 => 12,
+            Self::Ms1280 => 13,
+            Self::Ms2560 => 14,
+            Self::Ms5120 => 15,
+        };
+        w.write_index(index, 16, false)
+    }
+}
+
+impl rt::AperDecode for TimeToTrigger {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        Ok(match r.read_index(16, false)? {
+            0 => Self::Ms0,
+            1 => Self::Ms40,
+            2 => Self::Ms64,
+            3 => Self::Ms80,
+            4 => Self::Ms100,
+            5 => Self::Ms128,
+            6 => Self::Ms160,
+            7 => Self::Ms256,
+            8 => Self::Ms320,
+            9 => Self::Ms480,
+            10 => Self::Ms512,
+            11 => Self::Ms640,
+            12 => Self::Ms1024,
+            13 => Self::Ms1280,
+            14 => Self::Ms2560,
+            15 => Self::Ms5120,
+            i => return Err(r.error(rt::ErrorKind::InvalidIndex(i))),
+        })
+    }
+}
+
+/// ASN.1 `TLContainer` (NGAP-IEs).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TlContainer(pub Vec<u8>);
+
+impl rt::AperEncode for TlContainer {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        let x = &self.0;
+        w.write_octet_string(x, rt::Size::UNBOUNDED)
+    }
+}
+
+impl rt::AperDecode for TlContainer {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        Ok(Self(r.read_octet_string(rt::Size::UNBOUNDED)?))
+    }
+}
+
+/// ASN.1 `TWAP-ID` (NGAP-IEs).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TwapId(pub Vec<u8>);
+
+impl rt::AperEncode for TwapId {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        let x = &self.0;
+        w.write_octet_string(x, rt::Size::UNBOUNDED)
+    }
+}
+
+impl rt::AperDecode for TwapId {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        Ok(Self(r.read_octet_string(rt::Size::UNBOUNDED)?))
+    }
+}
+
+/// ASN.1 `TWIF-ID` (NGAP-IEs).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TwifId {
+    /// `tWIF-ID`
+    TwifId(rt::BitString),
+    /// `choice-Extensions`
+    ChoiceExtensions(rt::ie::RawIe),
+}
+
+impl rt::AperEncode for TwifId {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        match self {
+            Self::TwifId(x) => {
+                w.write_index(0, 2, false)?;
+                w.write_bit_string(x, rt::Size::fixed(32).extensible())
+            }
+            Self::ChoiceExtensions(x) => {
+                w.write_index(1, 2, false)?;
+                x.aper_encode(w)
+            }
+        }
+    }
+}
+
+impl rt::AperDecode for TwifId {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        match r.read_index(2, false)? {
+            0 => Ok(Self::TwifId(r.read_bit_string(rt::Size::fixed(32).extensible())?)),
+            1 => Ok(Self::ChoiceExtensions(<rt::ie::RawIe>::aper_decode(r)?)),
+            i => Err(r.error(rt::ErrorKind::InvalidIndex(i))),
+        }
+    }
+}
+
+/// The extension IEs of `TSCAssistanceInformation-ExtIEs` (NGAP-IEs). IEs not defined here are kept in `unknown_ies`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct TscAssistanceInformationExtIes {
+    /// `id-SurvivalTime` (id 327, Ignore, Optional)
+    pub survival_time: Option<SurvivalTime>,
+    /// `id-RANfeedbacktype` (id 391, Ignore, Optional)
+    pub ra_nfeedbacktype: Option<RaNfeedbacktype>,
+    /// `id-N6JitterInformation` (id 424, Ignore, Optional)
+    pub n6_jitter_information: Option<N6JitterInformation>,
+    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
+    pub unknown_ies: Vec<rt::ie::RawIe>,
+}
+
+impl TscAssistanceInformationExtIes {
+    /// A value with the mandatory IEs given and every optional one absent.
+    pub fn new() -> Self {
+        Self {
+            survival_time: None,
+            ra_nfeedbacktype: None,
+            n6_jitter_information: None,
+            unknown_ies: Vec::new(),
+        }
+    }
+}
+
+impl rt::AperEncode for TscAssistanceInformationExtIes {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
+        if let Some(x) = &self.survival_time {
+            ies.push(rt::ie::RawIe::new(327, rt::ie::Criticality::Ignore, x)?);
+        }
+        if let Some(x) = &self.ra_nfeedbacktype {
+            ies.push(rt::ie::RawIe::new(391, rt::ie::Criticality::Ignore, x)?);
+        }
+        if let Some(x) = &self.n6_jitter_information {
+            ies.push(rt::ie::RawIe::new(424, rt::ie::Criticality::Ignore, x)?);
+        }
+        ies.extend(self.unknown_ies.iter().cloned());
+        rt::ie::write_container(w, rt::Size::range(1, 65535), &ies)
+    }
+}
+
+impl rt::AperDecode for TscAssistanceInformationExtIes {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let mut s_survival_time: Option<SurvivalTime> = None;
+        let mut s_ra_nfeedbacktype: Option<RaNfeedbacktype> = None;
+        let mut s_n6_jitter_information: Option<N6JitterInformation> = None;
+        let mut unknown_ies = Vec::new();
+        for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
+            match ie.id {
+                327 => rt::ie::set_once(&mut s_survival_time, 327, ie.decode()?)?,
+                391 => rt::ie::set_once(&mut s_ra_nfeedbacktype, 391, ie.decode()?)?,
+                424 => rt::ie::set_once(&mut s_n6_jitter_information, 424, ie.decode()?)?,
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
+            }
+        }
+        Ok(Self {
+            survival_time: s_survival_time,
+            ra_nfeedbacktype: s_ra_nfeedbacktype,
+            n6_jitter_information: s_n6_jitter_information,
+            unknown_ies,
+        })
+    }
+}
+
+/// ASN.1 `TSCAssistanceInformation` (NGAP-IEs).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TscAssistanceInformation {
+    /// `periodicity`
+    pub periodicity: Periodicity,
+    /// `burstArrivalTime`
+    pub burst_arrival_time: Option<BurstArrivalTime>,
+    /// `iE-Extensions`
+    pub ie_extensions: Option<TscAssistanceInformationExtIes>,
+}
+
+impl TscAssistanceInformation {
+    /// A value with the mandatory components given and every optional one absent.
+    pub fn new(periodicity: Periodicity) -> Self {
+        Self {
+            periodicity,
+            burst_arrival_time: None,
+            ie_extensions: None,
+        }
+    }
+}
+
+impl rt::AperEncode for TscAssistanceInformation {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        w.write_bit(false); // extension marker: no additions
+        w.write_bit(self.burst_arrival_time.is_some());
+        w.write_bit(self.ie_extensions.is_some());
+        {
+            let x = &self.periodicity;
+            x.aper_encode(w)?;
+        }
+        if let Some(x) = &self.burst_arrival_time {
+            x.aper_encode(w)?;
+        }
+        if let Some(x) = &self.ie_extensions {
+            x.aper_encode(w)?;
+        }
+        Ok(())
+    }
+}
+
+impl rt::AperDecode for TscAssistanceInformation {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let extension = r.read_bit()?;
+        let p_burst_arrival_time = r.read_bit()?;
+        let p_ie_extensions = r.read_bit()?;
+        let v_periodicity = <Periodicity>::aper_decode(r)?;
+        let v_burst_arrival_time = if p_burst_arrival_time { Some(<BurstArrivalTime>::aper_decode(r)?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(<TscAssistanceInformationExtIes>::aper_decode(r)?) } else { None };
+        if extension {
+            r.read_extension_additions()?;
+        }
+        Ok(Self {
+            periodicity: v_periodicity,
+            burst_arrival_time: v_burst_arrival_time,
+            ie_extensions: v_ie_extensions,
+        })
+    }
+}
+
 /// ASN.1 `TSCTrafficCharacteristics` (NGAP-IEs).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TscTrafficCharacteristics {
@@ -54,7 +351,7 @@ impl rt::AperDecode for TscTrafficCharacteristics {
         let p_ie_extensions = r.read_bit()?;
         let v_tsc_assistance_information_dl = if p_tsc_assistance_information_dl { Some(<TscAssistanceInformation>::aper_decode(r)?) } else { None };
         let v_tsc_assistance_information_ul = if p_tsc_assistance_information_ul { Some(<TscAssistanceInformation>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -115,7 +412,7 @@ impl rt::AperDecode for TscTrafficCharacteristicsFeedback {
         let p_ie_extensions = r.read_bit()?;
         let v_tsc_feedback_information_dl = if p_tsc_feedback_information_dl { Some(<TscFeedbackInformation>::aper_decode(r)?) } else { None };
         let v_tsc_feedback_information_ul = if p_tsc_feedback_information_ul { Some(<TscFeedbackInformation>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -175,7 +472,7 @@ impl rt::AperDecode for TscFeedbackInformation {
         let p_ie_extensions = r.read_bit()?;
         let v_burst_arrival_time_offset = r.read_int_as::<i32>(&rt::IntSpec::range(-640000, 640000).extensible())?;
         let v_adjusted_periodicity = if p_adjusted_periodicity { Some(<Periodicity>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -234,7 +531,7 @@ impl rt::AperDecode for UeAggregateMaximumBitRate {
         let p_ie_extensions = r.read_bit()?;
         let v_ue_aggregate_maximum_bit_rate_dl = <BitRate>::aper_decode(r)?;
         let v_ue_aggregate_maximum_bit_rate_ul = <BitRate>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -302,7 +599,7 @@ impl rt::AperDecode for UeAppLayerMeasInfoItem {
         let extension = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_ue_app_layer_meas_config_info = <UeAppLayerMeasConfigInfo>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -392,7 +689,10 @@ impl rt::AperDecode for UeAppLayerMeasConfigInfoExtIes {
                 398 => rt::ie::set_once(&mut s_assistance_information_qoe_meas, 398, ie.decode()?)?,
                 399 => rt::ie::set_once(&mut s_comm_service_type, 399, ie.decode()?)?,
                 438 => rt::ie::set_once(&mut s_qoe_rv_qoe_reporting_paths, 438, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -608,7 +908,7 @@ impl rt::AperDecode for UeAssociatedLogicalNgConnectionItem {
         let p_ie_extensions = r.read_bit()?;
         let v_amf_ue_ngap_id = if p_amf_ue_ngap_id { Some(<AmfUeNgapId>::aper_decode(r)?) } else { None };
         let v_ran_ue_ngap_id = if p_ran_ue_ngap_id { Some(<RanUeNgapId>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -712,7 +1012,7 @@ impl rt::AperDecode for UeContextResumeRequestTransfer {
         let p_qos_flow_failed_to_resume_list = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_qos_flow_failed_to_resume_list = if p_qos_flow_failed_to_resume_list { Some(<QosFlowListWithCause>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -763,7 +1063,7 @@ impl rt::AperDecode for UeContextResumeResponseTransfer {
         let p_qos_flow_failed_to_resume_list = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_qos_flow_failed_to_resume_list = if p_qos_flow_failed_to_resume_list { Some(<QosFlowListWithCause>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -814,7 +1114,7 @@ impl rt::AperDecode for UeContextSuspendRequestTransfer {
         let p_suspend_indicator = r.read_bit()?;
         let p_ie_extensions = r.read_bit()?;
         let v_suspend_indicator = if p_suspend_indicator { Some(<SuspendIndicator>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1038,7 +1338,7 @@ impl rt::AperDecode for UeDifferentiationInfo {
         let v_stationary_indication = if p_stationary_indication { Some(<UeDifferentiationInfoStationaryIndication>::aper_decode(r)?) } else { None };
         let v_traffic_profile = if p_traffic_profile { Some(<UeDifferentiationInfoTrafficProfile>::aper_decode(r)?) } else { None };
         let v_battery_indication = if p_battery_indication { Some(<UeDifferentiationInfoBatteryIndication>::aper_decode(r)?) } else { None };
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1227,7 +1527,7 @@ impl rt::AperDecode for UeNgapIdPair {
         let p_ie_extensions = r.read_bit()?;
         let v_amf_ue_ngap_id = <AmfUeNgapId>::aper_decode(r)?;
         let v_ran_ue_ngap_id = <RanUeNgapId>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1371,7 +1671,7 @@ impl rt::AperDecode for UePresenceInAreaOfInterestItem {
         let p_ie_extensions = r.read_bit()?;
         let v_location_reporting_reference_id = <LocationReportingReferenceId>::aper_decode(r)?;
         let v_ue_presence = <UePresence>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1437,7 +1737,10 @@ impl rt::AperDecode for UeRadioCapabilityForPagingExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 214 => rt::ie::set_once(&mut s_ue_radio_capability_for_paging_of_nb_iot, 214, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -1706,7 +2009,7 @@ impl rt::AperDecode for UeSecurityCapabilities {
         let v_n_rintegrity_protection_algorithms = <NRintegrityProtectionAlgorithms>::aper_decode(r)?;
         let v_eutr_aencryption_algorithms = <EutrAencryptionAlgorithms>::aper_decode(r)?;
         let v_eutr_aintegrity_protection_algorithms = <EutrAintegrityProtectionAlgorithms>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1792,7 +2095,7 @@ impl rt::AperDecode for UeSliceMaximumBitRateItem {
         let v_s_nssai = <SNssai>::aper_decode(r)?;
         let v_ue_slice_maximum_bit_rate_dl = <BitRate>::aper_decode(r)?;
         let v_ue_slice_maximum_bit_rate_ul = <BitRate>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1878,7 +2181,7 @@ impl rt::AperDecode for UlCpSecurityInformation {
         let p_ie_extensions = r.read_bit()?;
         let v_ul_nas_mac = <UlNasMac>::aper_decode(r)?;
         let v_ul_nas_count = <UlNasCount>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
+        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| { ies.iter().for_each(rt::ie::note_unknown); rt::ie::UnknownIes { ies } })?) } else { None };
         if extension {
             r.read_extension_additions()?;
         }
@@ -1986,7 +2289,10 @@ impl rt::AperDecode for UlNguUpTnlModifyItemExtIes {
             match ie.id {
                 195 => rt::ie::set_once(&mut s_redundant_ul_ngu_up_tnl_information, 195, ie.decode()?)?,
                 192 => rt::ie::set_once(&mut s_redundant_dl_ngu_up_tnl_information, 192, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -2110,7 +2416,10 @@ impl rt::AperDecode for UnavailableGuamiItemExtIes {
         for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
             match ie.id {
                 442 => rt::ie::set_once(&mut s_extended_backup_amf_name, 442, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         Ok(Self {
@@ -2187,289 +2496,5 @@ impl rt::AperDecode for UnavailableGuamiItem {
             backup_amf_name: v_backup_amf_name,
             ie_extensions: v_ie_extensions,
         })
-    }
-}
-
-/// ASN.1 `ULForwarding` (NGAP-IEs).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[non_exhaustive]
-pub enum UlForwarding {
-    /// `ul-forwarding-proposed`
-    UlForwardingProposed,
-}
-
-impl rt::AperEncode for UlForwarding {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        let index: u64 = match self {
-            Self::UlForwardingProposed => 0,
-        };
-        w.write_index(index, 1, true)
-    }
-}
-
-impl rt::AperDecode for UlForwarding {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        Ok(match r.read_index(1, true)? {
-            0 => Self::UlForwardingProposed,
-            i => return Err(r.error(rt::ErrorKind::InvalidIndex(i))),
-        })
-    }
-}
-
-/// ASN.1 `UpdateFeedback` (NGAP-IEs).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UpdateFeedback(pub rt::BitString);
-
-impl rt::AperEncode for UpdateFeedback {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        let x = &self.0;
-        w.write_bit_string(x, rt::Size::fixed(8).extensible())
-    }
-}
-
-impl rt::AperDecode for UpdateFeedback {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        Ok(Self(r.read_bit_string(rt::Size::fixed(8).extensible())?))
-    }
-}
-
-/// ASN.1 `UPTransportLayerInformation` (NGAP-IEs).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum UpTransportLayerInformation {
-    /// `gTPTunnel`
-    GtpTunnel(GtpTunnel),
-    /// `choice-Extensions`
-    ChoiceExtensions(rt::ie::RawIe),
-}
-
-impl rt::AperEncode for UpTransportLayerInformation {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        match self {
-            Self::GtpTunnel(x) => {
-                w.write_index(0, 2, false)?;
-                x.aper_encode(w)
-            }
-            Self::ChoiceExtensions(x) => {
-                w.write_index(1, 2, false)?;
-                x.aper_encode(w)
-            }
-        }
-    }
-}
-
-impl rt::AperDecode for UpTransportLayerInformation {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        match r.read_index(2, false)? {
-            0 => Ok(Self::GtpTunnel(<GtpTunnel>::aper_decode(r)?)),
-            1 => Ok(Self::ChoiceExtensions(<rt::ie::RawIe>::aper_decode(r)?)),
-            i => Err(r.error(rt::ErrorKind::InvalidIndex(i))),
-        }
-    }
-}
-
-/// ASN.1 `UPTransportLayerInformationList` (NGAP-IEs).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UpTransportLayerInformationList(pub Vec<UpTransportLayerInformationItem>);
-
-impl rt::AperEncode for UpTransportLayerInformationList {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        let x = &self.0;
-        w.write_seq_of(x, rt::Size::range(1, 3), |w, x| x.aper_encode(w))
-    }
-}
-
-impl rt::AperDecode for UpTransportLayerInformationList {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        Ok(Self(r.read_seq_of(rt::Size::range(1, 3), |r| <UpTransportLayerInformationItem>::aper_decode(r))?))
-    }
-}
-
-/// The extension IEs of `UPTransportLayerInformationItem-ExtIEs` (NGAP-IEs). IEs not defined here are kept in `unknown_ies`.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct UpTransportLayerInformationItemExtIes {
-    /// `id-CommonNetworkInstance` (id 166, Ignore, Optional)
-    pub common_network_instance: Option<CommonNetworkInstance>,
-    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
-    pub unknown_ies: Vec<rt::ie::RawIe>,
-}
-
-impl UpTransportLayerInformationItemExtIes {
-    /// A value with the mandatory IEs given and every optional one absent.
-    pub fn new() -> Self {
-        Self {
-            common_network_instance: None,
-            unknown_ies: Vec::new(),
-        }
-    }
-}
-
-impl rt::AperEncode for UpTransportLayerInformationItemExtIes {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        if let Some(x) = &self.common_network_instance {
-            ies.push(rt::ie::RawIe::new(166, rt::ie::Criticality::Ignore, x)?);
-        }
-        ies.extend(self.unknown_ies.iter().cloned());
-        rt::ie::write_container(w, rt::Size::range(1, 65535), &ies)
-    }
-}
-
-impl rt::AperDecode for UpTransportLayerInformationItemExtIes {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let mut s_common_network_instance: Option<CommonNetworkInstance> = None;
-        let mut unknown_ies = Vec::new();
-        for ie in rt::ie::read_container(r, rt::Size::range(1, 65535))? {
-            match ie.id {
-                166 => rt::ie::set_once(&mut s_common_network_instance, 166, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
-            }
-        }
-        Ok(Self {
-            common_network_instance: s_common_network_instance,
-            unknown_ies,
-        })
-    }
-}
-
-/// ASN.1 `UPTransportLayerInformationItem` (NGAP-IEs).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UpTransportLayerInformationItem {
-    /// `nGU-UP-TNLInformation`
-    pub ngu_up_tnl_information: UpTransportLayerInformation,
-    /// `iE-Extensions`
-    pub ie_extensions: Option<UpTransportLayerInformationItemExtIes>,
-}
-
-impl UpTransportLayerInformationItem {
-    /// A value with the mandatory components given and every optional one absent.
-    pub fn new(ngu_up_tnl_information: UpTransportLayerInformation) -> Self {
-        Self {
-            ngu_up_tnl_information,
-            ie_extensions: None,
-        }
-    }
-}
-
-impl rt::AperEncode for UpTransportLayerInformationItem {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        w.write_bit(false); // extension marker: no additions
-        w.write_bit(self.ie_extensions.is_some());
-        {
-            let x = &self.ngu_up_tnl_information;
-            x.aper_encode(w)?;
-        }
-        if let Some(x) = &self.ie_extensions {
-            x.aper_encode(w)?;
-        }
-        Ok(())
-    }
-}
-
-impl rt::AperDecode for UpTransportLayerInformationItem {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let extension = r.read_bit()?;
-        let p_ie_extensions = r.read_bit()?;
-        let v_ngu_up_tnl_information = <UpTransportLayerInformation>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(<UpTransportLayerInformationItemExtIes>::aper_decode(r)?) } else { None };
-        if extension {
-            r.read_extension_additions()?;
-        }
-        Ok(Self {
-            ngu_up_tnl_information: v_ngu_up_tnl_information,
-            ie_extensions: v_ie_extensions,
-        })
-    }
-}
-
-/// ASN.1 `UPTransportLayerInformationPairList` (NGAP-IEs).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UpTransportLayerInformationPairList(pub Vec<UpTransportLayerInformationPairItem>);
-
-impl rt::AperEncode for UpTransportLayerInformationPairList {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        let x = &self.0;
-        w.write_seq_of(x, rt::Size::range(1, 3), |w, x| x.aper_encode(w))
-    }
-}
-
-impl rt::AperDecode for UpTransportLayerInformationPairList {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        Ok(Self(r.read_seq_of(rt::Size::range(1, 3), |r| <UpTransportLayerInformationPairItem>::aper_decode(r))?))
-    }
-}
-
-/// ASN.1 `UPTransportLayerInformationPairItem` (NGAP-IEs).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UpTransportLayerInformationPairItem {
-    /// `uL-NGU-UP-TNLInformation`
-    pub ul_ngu_up_tnl_information: UpTransportLayerInformation,
-    /// `dL-NGU-UP-TNLInformation`
-    pub dl_ngu_up_tnl_information: UpTransportLayerInformation,
-    /// `iE-Extensions`
-    pub ie_extensions: Option<rt::ie::UnknownIes>,
-}
-
-impl UpTransportLayerInformationPairItem {
-    /// A value with the mandatory components given and every optional one absent.
-    pub fn new(ul_ngu_up_tnl_information: UpTransportLayerInformation, dl_ngu_up_tnl_information: UpTransportLayerInformation) -> Self {
-        Self {
-            ul_ngu_up_tnl_information,
-            dl_ngu_up_tnl_information,
-            ie_extensions: None,
-        }
-    }
-}
-
-impl rt::AperEncode for UpTransportLayerInformationPairItem {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        w.write_bit(false); // extension marker: no additions
-        w.write_bit(self.ie_extensions.is_some());
-        {
-            let x = &self.ul_ngu_up_tnl_information;
-            x.aper_encode(w)?;
-        }
-        {
-            let x = &self.dl_ngu_up_tnl_information;
-            x.aper_encode(w)?;
-        }
-        if let Some(x) = &self.ie_extensions {
-            rt::ie::write_container(w, rt::Size::range(1, 65535), &x.ies)?;
-        }
-        Ok(())
-    }
-}
-
-impl rt::AperDecode for UpTransportLayerInformationPairItem {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let extension = r.read_bit()?;
-        let p_ie_extensions = r.read_bit()?;
-        let v_ul_ngu_up_tnl_information = <UpTransportLayerInformation>::aper_decode(r)?;
-        let v_dl_ngu_up_tnl_information = <UpTransportLayerInformation>::aper_decode(r)?;
-        let v_ie_extensions = if p_ie_extensions { Some(rt::ie::read_container(r, rt::Size::range(1, 65535)).map(|ies| rt::ie::UnknownIes { ies })?) } else { None };
-        if extension {
-            r.read_extension_additions()?;
-        }
-        Ok(Self {
-            ul_ngu_up_tnl_information: v_ul_ngu_up_tnl_information,
-            dl_ngu_up_tnl_information: v_dl_ngu_up_tnl_information,
-            ie_extensions: v_ie_extensions,
-        })
-    }
-}
-
-/// ASN.1 `URI-address` (NGAP-IEs).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UriAddress(pub String);
-
-impl rt::AperEncode for UriAddress {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        let x = &self.0;
-        w.write_char_string(x, rt::Size::UNBOUNDED, rt::CharSet::Visible)
-    }
-}
-
-impl rt::AperDecode for UriAddress {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        Ok(Self(r.read_char_string(rt::Size::UNBOUNDED, rt::CharSet::Visible)?))
     }
 }

@@ -144,6 +144,38 @@ pub fn required<T>(slot: Option<T>, id: u32, criticality: Criticality) -> Result
     slot.ok_or_else(|| crate::AperError::new(ErrorKind::MissingIe { id, criticality }, 0))
 }
 
+thread_local! {
+    static UNKNOWN_SINK: std::cell::RefCell<Option<Vec<RawIe>>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Called by generated decoders for every IE they do not know, at any nesting depth (message IEs, IEs of list items,
+/// extension IEs). It does nothing unless [`record_unknown_ies`] is active on this thread.
+pub fn note_unknown(ie: &RawIe) {
+    UNKNOWN_SINK.with(|s| {
+        if let Some(sink) = s.borrow_mut().as_mut() {
+            sink.push(ie.clone());
+        }
+    });
+}
+
+/// Run `f` and also return every unknown IE that decoders met meanwhile (see [`note_unknown`]), in the order they were
+/// met. Scopes nest: an inner call gets only its own IEs, and the outer recording is restored afterwards, also when
+/// `f` panics.
+pub fn record_unknown_ies<T>(f: impl FnOnce() -> T) -> (T, Vec<RawIe>) {
+    struct Restore(Option<Vec<RawIe>>);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            UNKNOWN_SINK.with(|s| *s.borrow_mut() = self.0.take());
+        }
+    }
+    let _restore = Restore(UNKNOWN_SINK.with(|s| s.borrow_mut().replace(Vec::new())));
+    let value = f();
+    let seen = UNKNOWN_SINK
+        .with(|s| s.borrow_mut().take())
+        .unwrap_or_default();
+    (value, seen)
+}
+
 /// The members of an extension container (`iE-Extensions`) that this version of the spec defines no type for.
 /// Whatever arrives is kept as raw IEs.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

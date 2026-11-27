@@ -5,6 +5,73 @@ use ngap_aper as rt;
 use rt::{AperDecode as _, AperEncode as _};
 use crate::*;
 
+/// ASN.1 `NGRemovalRequest` (NGAP-PDU-Contents): the IEs of the message are the fields.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NgRemovalRequest {
+    /// `id-GlobalRANNodeID` (id 27, Reject, Mandatory)
+    pub global_ran_node_id: GlobalRanNodeId,
+    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
+    pub unknown_ies: Vec<rt::ie::RawIe>,
+}
+
+impl NgRemovalRequest {
+    /// A value with the mandatory IEs given and every optional one absent.
+    pub fn new(global_ran_node_id: GlobalRanNodeId) -> Self {
+        Self {
+            global_ran_node_id,
+            unknown_ies: Vec::new(),
+        }
+    }
+}
+
+impl rt::AperEncode for NgRemovalRequest {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        w.write_bit(false); // extension marker: no additions
+        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
+        {
+            let x = &self.global_ran_node_id;
+            ies.push(rt::ie::RawIe::new(27, rt::ie::Criticality::Reject, x)?);
+        }
+        ies.extend(self.unknown_ies.iter().cloned());
+        rt::ie::write_container(w, rt::Size::range(0, 65535), &ies)
+    }
+}
+
+impl rt::AperDecode for NgRemovalRequest {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let extension = r.read_bit()?;
+        let mut s_global_ran_node_id: Option<GlobalRanNodeId> = None;
+        let mut unknown_ies = Vec::new();
+        for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
+            match ie.id {
+                27 => rt::ie::set_once(&mut s_global_ran_node_id, 27, ie.decode()?)?,
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
+            }
+        }
+        if extension {
+            r.read_extension_additions()?;
+        }
+        Ok(Self {
+            global_ran_node_id: rt::ie::required(s_global_ran_node_id, 27, rt::ie::Criticality::Reject)?,
+            unknown_ies,
+        })
+    }
+}
+
+impl NgRemovalRequest {
+    /// The ids of the IEs this version of the specification defines for the message, in the order the
+    /// specification requires them on the wire.
+    pub const IE_IDS: &'static [u32] = &[27];
+
+    /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
+    pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {
+        rt::ie::wire_ie_ids(content, true, rt::Size::range(0, 65535))
+    }
+}
+
 /// ASN.1 `NGRemovalResponse` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NgRemovalResponse {
@@ -61,7 +128,10 @@ impl rt::AperDecode for NgRemovalResponse {
                 1 => rt::ie::set_once(&mut s_amf_name, 1, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
                 274 => rt::ie::set_once(&mut s_extended_amf_name, 274, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -135,7 +205,10 @@ impl rt::AperDecode for NgRemovalFailure {
             match ie.id {
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -266,7 +339,10 @@ impl rt::AperDecode for NgSetupRequest {
                 273 => rt::ie::set_once(&mut s_extended_ran_node_name, 273, ie.decode()?)?,
                 475 => rt::ie::set_once(&mut s_aiot_support, 475, ie.decode()?)?,
                 483 => rt::ie::set_once(&mut s_additional_uli, 483, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -421,7 +497,10 @@ impl rt::AperDecode for NgSetupResponse {
                 404 => rt::ie::set_once(&mut s_mobile_iab_supported, 404, ie.decode()?)?,
                 467 => rt::ie::set_once(&mut s_aiotf_identifier, 467, ie.decode()?)?,
                 476 => rt::ie::set_once(&mut s_aiotf_name, 476, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -511,7 +590,10 @@ impl rt::AperDecode for NgSetupFailure {
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 107 => rt::ie::set_once(&mut s_time_to_wait, 107, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -640,7 +722,10 @@ impl rt::AperDecode for RanConfigurationUpdate {
                 273 => rt::ie::set_once(&mut s_extended_ran_node_name, 273, ie.decode()?)?,
                 483 => rt::ie::set_once(&mut s_additional_uli, 483, ie.decode()?)?,
                 475 => rt::ie::set_once(&mut s_aiot_support, 475, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -711,7 +796,10 @@ impl rt::AperDecode for RanConfigurationUpdateAcknowledge {
         for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
             match ie.id {
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -791,7 +879,10 @@ impl rt::AperDecode for RanConfigurationUpdateFailure {
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 107 => rt::ie::set_once(&mut s_time_to_wait, 107, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -912,7 +1003,10 @@ impl rt::AperDecode for AmfConfigurationUpdate {
                 7 => rt::ie::set_once(&mut s_amf_tnl_association_to_remove_list, 7, ie.decode()?)?,
                 8 => rt::ie::set_once(&mut s_amf_tnl_association_to_update_list, 8, ie.decode()?)?,
                 274 => rt::ie::set_once(&mut s_extended_amf_name, 274, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -998,7 +1092,10 @@ impl rt::AperDecode for AmfConfigurationUpdateAcknowledge {
                 5 => rt::ie::set_once(&mut s_amf_tnl_association_setup_list, 5, ie.decode()?)?,
                 4 => rt::ie::set_once(&mut s_amf_tnl_association_failed_to_setup_list, 4, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1080,7 +1177,10 @@ impl rt::AperDecode for AmfConfigurationUpdateFailure {
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 107 => rt::ie::set_once(&mut s_time_to_wait, 107, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1146,7 +1246,10 @@ impl rt::AperDecode for AmfStatusIndication {
         for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
             match ie.id {
                 120 => rt::ie::set_once(&mut s_unavailable_guami_list, 120, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1219,7 +1322,10 @@ impl rt::AperDecode for NgReset {
             match ie.id {
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 88 => rt::ie::set_once(&mut s_reset_type, 88, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1291,7 +1397,10 @@ impl rt::AperDecode for NgResetAcknowledge {
             match ie.id {
                 111 => rt::ie::set_once(&mut s_ue_associated_logical_ng_connection_list, 111, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1387,7 +1496,10 @@ impl rt::AperDecode for ErrorIndication {
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
                 26 => rt::ie::set_once(&mut s_five_g_s_tmsi, 26, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1478,7 +1590,10 @@ impl rt::AperDecode for OverloadStart {
                 9 => rt::ie::set_once(&mut s_amf_traffic_load_reduction_indication, 9, ie.decode()?)?,
                 49 => rt::ie::set_once(&mut s_overload_start_nssai_list, 49, ie.decode()?)?,
                 451 => rt::ie::set_once(&mut s_guami_list, 451, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1544,7 +1659,10 @@ impl rt::AperDecode for OverloadStop {
         for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
             match ie.id {
                 451 => rt::ie::set_once(&mut s_guami_list, 451, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1623,7 +1741,10 @@ impl rt::AperDecode for UplinkRanConfigurationTransfer {
                 99 => rt::ie::set_once(&mut s_son_configuration_transfer_ul, 99, ie.decode()?)?,
                 158 => rt::ie::set_once(&mut s_endc_son_configuration_transfer_ul, 158, ie.decode()?)?,
                 251 => rt::ie::set_once(&mut s_intersystem_son_configuration_transfer_ul, 251, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1704,7 +1825,10 @@ impl rt::AperDecode for DownlinkRanConfigurationTransfer {
                 98 => rt::ie::set_once(&mut s_son_configuration_transfer_dl, 98, ie.decode()?)?,
                 157 => rt::ie::set_once(&mut s_endc_son_configuration_transfer_dl, 157, ie.decode()?)?,
                 250 => rt::ie::set_once(&mut s_intersystem_son_configuration_transfer_dl, 250, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1853,7 +1977,10 @@ impl rt::AperDecode for WriteReplaceWarningRequest {
                 123 => rt::ie::set_once(&mut s_warning_message_contents, 123, ie.decode()?)?,
                 17 => rt::ie::set_once(&mut s_concurrent_warning_message_ind, 17, ie.decode()?)?,
                 141 => rt::ie::set_once(&mut s_warning_area_coordinates, 141, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1952,7 +2079,10 @@ impl rt::AperDecode for WriteReplaceWarningResponse {
                 95 => rt::ie::set_once(&mut s_serial_number, 95, ie.decode()?)?,
                 13 => rt::ie::set_once(&mut s_broadcast_completed_area_list, 13, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -2044,7 +2174,10 @@ impl rt::AperDecode for PwsCancelRequest {
                 95 => rt::ie::set_once(&mut s_serial_number, 95, ie.decode()?)?,
                 122 => rt::ie::set_once(&mut s_warning_area_list, 122, ie.decode()?)?,
                 14 => rt::ie::set_once(&mut s_cancel_all_warning_messages, 14, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -2136,7 +2269,10 @@ impl rt::AperDecode for PwsCancelResponse {
                 95 => rt::ie::set_once(&mut s_serial_number, 95, ie.decode()?)?,
                 12 => rt::ie::set_once(&mut s_broadcast_cancelled_area_list, 12, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -2229,7 +2365,10 @@ impl rt::AperDecode for PwsRestartIndication {
                 27 => rt::ie::set_once(&mut s_global_ran_node_id, 27, ie.decode()?)?,
                 104 => rt::ie::set_once(&mut s_tai_list_for_restart, 104, ie.decode()?)?,
                 23 => rt::ie::set_once(&mut s_emergency_area_id_list_for_restart, 23, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -2305,7 +2444,10 @@ impl rt::AperDecode for PwsFailureIndication {
             match ie.id {
                 81 => rt::ie::set_once(&mut s_pws_failed_cell_id_list, 81, ie.decode()?)?,
                 27 => rt::ie::set_once(&mut s_global_ran_node_id, 27, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -2323,100 +2465,6 @@ impl PwsFailureIndication {
     /// The ids of the IEs this version of the specification defines for the message, in the order the
     /// specification requires them on the wire.
     pub const IE_IDS: &'static [u32] = &[81, 27];
-
-    /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
-    pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {
-        rt::ie::wire_ie_ids(content, true, rt::Size::range(0, 65535))
-    }
-}
-
-/// ASN.1 `DownlinkUEAssociatedNRPPaTransport` (NGAP-PDU-Contents): the IEs of the message are the fields.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DownlinkUeAssociatedNrpPaTransport {
-    /// `id-AMF-UE-NGAP-ID` (id 10, Reject, Mandatory)
-    pub amf_ue_ngap_id: AmfUeNgapId,
-    /// `id-RAN-UE-NGAP-ID` (id 85, Reject, Mandatory)
-    pub ran_ue_ngap_id: RanUeNgapId,
-    /// `id-RoutingID` (id 89, Reject, Mandatory)
-    pub routing_id: RoutingId,
-    /// `id-NRPPa-PDU` (id 46, Reject, Mandatory)
-    pub nrp_pa_pdu: NrpPaPdu,
-    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
-    pub unknown_ies: Vec<rt::ie::RawIe>,
-}
-
-impl DownlinkUeAssociatedNrpPaTransport {
-    /// A value with the mandatory IEs given and every optional one absent.
-    pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId, routing_id: RoutingId, nrp_pa_pdu: NrpPaPdu) -> Self {
-        Self {
-            amf_ue_ngap_id,
-            ran_ue_ngap_id,
-            routing_id,
-            nrp_pa_pdu,
-            unknown_ies: Vec::new(),
-        }
-    }
-}
-
-impl rt::AperEncode for DownlinkUeAssociatedNrpPaTransport {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        w.write_bit(false); // extension marker: no additions
-        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.amf_ue_ngap_id;
-            ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Reject, x)?);
-        }
-        {
-            let x = &self.ran_ue_ngap_id;
-            ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Reject, x)?);
-        }
-        {
-            let x = &self.routing_id;
-            ies.push(rt::ie::RawIe::new(89, rt::ie::Criticality::Reject, x)?);
-        }
-        {
-            let x = &self.nrp_pa_pdu;
-            ies.push(rt::ie::RawIe::new(46, rt::ie::Criticality::Reject, x)?);
-        }
-        ies.extend(self.unknown_ies.iter().cloned());
-        rt::ie::write_container(w, rt::Size::range(0, 65535), &ies)
-    }
-}
-
-impl rt::AperDecode for DownlinkUeAssociatedNrpPaTransport {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let extension = r.read_bit()?;
-        let mut s_amf_ue_ngap_id: Option<AmfUeNgapId> = None;
-        let mut s_ran_ue_ngap_id: Option<RanUeNgapId> = None;
-        let mut s_routing_id: Option<RoutingId> = None;
-        let mut s_nrp_pa_pdu: Option<NrpPaPdu> = None;
-        let mut unknown_ies = Vec::new();
-        for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
-            match ie.id {
-                10 => rt::ie::set_once(&mut s_amf_ue_ngap_id, 10, ie.decode()?)?,
-                85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
-                89 => rt::ie::set_once(&mut s_routing_id, 89, ie.decode()?)?,
-                46 => rt::ie::set_once(&mut s_nrp_pa_pdu, 46, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
-            }
-        }
-        if extension {
-            r.read_extension_additions()?;
-        }
-        Ok(Self {
-            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Reject)?,
-            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Reject)?,
-            routing_id: rt::ie::required(s_routing_id, 89, rt::ie::Criticality::Reject)?,
-            nrp_pa_pdu: rt::ie::required(s_nrp_pa_pdu, 46, rt::ie::Criticality::Reject)?,
-            unknown_ies,
-        })
-    }
-}
-
-impl DownlinkUeAssociatedNrpPaTransport {
-    /// The ids of the IEs this version of the specification defines for the message, in the order the
-    /// specification requires them on the wire.
-    pub const IE_IDS: &'static [u32] = &[10, 85, 89, 46];
 
     /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
     pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {

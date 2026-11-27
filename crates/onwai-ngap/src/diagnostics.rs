@@ -187,7 +187,13 @@ pub(crate) fn diagnostics(context: Context, issues: &[IeIssue]) -> CriticalityDi
     d.procedure_code = u8::try_from(context.procedure_code).ok().map(ProcedureCode);
     d.triggering_message = Some(context.message_type.triggering_message());
     d.procedure_criticality = Some(context.procedure_criticality);
-    let items: Vec<_> = issues.iter().filter_map(IeIssue::item).collect();
+    // the list holds 1..maxnoofErrors (256) items: report each distinct problem once, in the order found
+    let mut items: Vec<_> = Vec::new();
+    for item in issues.iter().filter_map(IeIssue::item) {
+        if items.len() < 256 && !items.contains(&item) {
+            items.push(item);
+        }
+    }
     if !items.is_empty() {
         d.ies_criticality_diagnostics = Some(CriticalityDiagnosticsIeList(items));
     }

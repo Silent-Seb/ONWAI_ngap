@@ -5,6 +5,119 @@ use ngap_aper as rt;
 use rt::{AperDecode as _, AperEncode as _};
 use crate::*;
 
+/// ASN.1 `UEContextSuspendRequest` (NGAP-PDU-Contents): the IEs of the message are the fields.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UeContextSuspendRequest {
+    /// `id-AMF-UE-NGAP-ID` (id 10, Reject, Mandatory)
+    pub amf_ue_ngap_id: AmfUeNgapId,
+    /// `id-RAN-UE-NGAP-ID` (id 85, Reject, Mandatory)
+    pub ran_ue_ngap_id: RanUeNgapId,
+    /// `id-InfoOnRecommendedCellsAndRANNodesForPaging` (id 32, Ignore, Optional)
+    pub info_on_recommended_cells_and_ran_nodes_for_paging: Option<InfoOnRecommendedCellsAndRanNodesForPaging>,
+    /// `id-PagingAssisDataforCEcapabUE` (id 207, Ignore, Optional)
+    pub paging_assis_datafor_c_ecapab_ue: Option<PagingAssisDataforCEcapabUe>,
+    /// `id-PDUSessionResourceSuspendListSUSReq` (id 231, Reject, Optional)
+    pub pdu_session_resource_suspend_list_sus_req: Option<PduSessionResourceSuspendListSusReq>,
+    /// `id-UserLocationInformation` (id 121, Ignore, Optional)
+    pub user_location_information: Option<UserLocationInformation>,
+    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
+    pub unknown_ies: Vec<rt::ie::RawIe>,
+}
+
+impl UeContextSuspendRequest {
+    /// A value with the mandatory IEs given and every optional one absent.
+    pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId) -> Self {
+        Self {
+            amf_ue_ngap_id,
+            ran_ue_ngap_id,
+            info_on_recommended_cells_and_ran_nodes_for_paging: None,
+            paging_assis_datafor_c_ecapab_ue: None,
+            pdu_session_resource_suspend_list_sus_req: None,
+            user_location_information: None,
+            unknown_ies: Vec::new(),
+        }
+    }
+}
+
+impl rt::AperEncode for UeContextSuspendRequest {
+    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
+        w.write_bit(false); // extension marker: no additions
+        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
+        {
+            let x = &self.amf_ue_ngap_id;
+            ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Reject, x)?);
+        }
+        {
+            let x = &self.ran_ue_ngap_id;
+            ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Reject, x)?);
+        }
+        if let Some(x) = &self.info_on_recommended_cells_and_ran_nodes_for_paging {
+            ies.push(rt::ie::RawIe::new(32, rt::ie::Criticality::Ignore, x)?);
+        }
+        if let Some(x) = &self.paging_assis_datafor_c_ecapab_ue {
+            ies.push(rt::ie::RawIe::new(207, rt::ie::Criticality::Ignore, x)?);
+        }
+        if let Some(x) = &self.pdu_session_resource_suspend_list_sus_req {
+            ies.push(rt::ie::RawIe::new(231, rt::ie::Criticality::Reject, x)?);
+        }
+        if let Some(x) = &self.user_location_information {
+            ies.push(rt::ie::RawIe::new(121, rt::ie::Criticality::Ignore, x)?);
+        }
+        ies.extend(self.unknown_ies.iter().cloned());
+        rt::ie::write_container(w, rt::Size::range(0, 65535), &ies)
+    }
+}
+
+impl rt::AperDecode for UeContextSuspendRequest {
+    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
+        let extension = r.read_bit()?;
+        let mut s_amf_ue_ngap_id: Option<AmfUeNgapId> = None;
+        let mut s_ran_ue_ngap_id: Option<RanUeNgapId> = None;
+        let mut s_info_on_recommended_cells_and_ran_nodes_for_paging: Option<InfoOnRecommendedCellsAndRanNodesForPaging> = None;
+        let mut s_paging_assis_datafor_c_ecapab_ue: Option<PagingAssisDataforCEcapabUe> = None;
+        let mut s_pdu_session_resource_suspend_list_sus_req: Option<PduSessionResourceSuspendListSusReq> = None;
+        let mut s_user_location_information: Option<UserLocationInformation> = None;
+        let mut unknown_ies = Vec::new();
+        for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
+            match ie.id {
+                10 => rt::ie::set_once(&mut s_amf_ue_ngap_id, 10, ie.decode()?)?,
+                85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
+                32 => rt::ie::set_once(&mut s_info_on_recommended_cells_and_ran_nodes_for_paging, 32, ie.decode()?)?,
+                207 => rt::ie::set_once(&mut s_paging_assis_datafor_c_ecapab_ue, 207, ie.decode()?)?,
+                231 => rt::ie::set_once(&mut s_pdu_session_resource_suspend_list_sus_req, 231, ie.decode()?)?,
+                121 => rt::ie::set_once(&mut s_user_location_information, 121, ie.decode()?)?,
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
+            }
+        }
+        if extension {
+            r.read_extension_additions()?;
+        }
+        Ok(Self {
+            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Reject)?,
+            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Reject)?,
+            info_on_recommended_cells_and_ran_nodes_for_paging: s_info_on_recommended_cells_and_ran_nodes_for_paging,
+            paging_assis_datafor_c_ecapab_ue: s_paging_assis_datafor_c_ecapab_ue,
+            pdu_session_resource_suspend_list_sus_req: s_pdu_session_resource_suspend_list_sus_req,
+            user_location_information: s_user_location_information,
+            unknown_ies,
+        })
+    }
+}
+
+impl UeContextSuspendRequest {
+    /// The ids of the IEs this version of the specification defines for the message, in the order the
+    /// specification requires them on the wire.
+    pub const IE_IDS: &'static [u32] = &[10, 85, 32, 207, 231, 121];
+
+    /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
+    pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {
+        rt::ie::wire_ie_ids(content, true, rt::Size::range(0, 65535))
+    }
+}
+
 /// ASN.1 `UEContextSuspendResponse` (NGAP-PDU-Contents): the IEs of the message are the fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UeContextSuspendResponse {
@@ -70,7 +183,10 @@ impl rt::AperDecode for UeContextSuspendResponse {
                 85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
                 93 => rt::ie::set_once(&mut s_security_context, 93, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -163,7 +279,10 @@ impl rt::AperDecode for UeContextSuspendFailure {
                 85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -535,7 +654,10 @@ impl rt::AperDecode for UeContextModificationRequest {
                 378 => rt::ie::set_once(&mut s_a2x_pc5_qos_parameters, 378, ie.decode()?)?,
                 400 => rt::ie::set_once(&mut s_mobile_iab_authorized, 400, ie.decode()?)?,
                 430 => rt::ie::set_once(&mut s_sl_positioning_ranging_service_info, 430, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -670,7 +792,10 @@ impl rt::AperDecode for UeContextModificationResponse {
                 92 => rt::ie::set_once(&mut s_rrc_state, 92, ie.decode()?)?,
                 121 => rt::ie::set_once(&mut s_user_location_information, 121, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -764,7 +889,10 @@ impl rt::AperDecode for UeContextModificationFailure {
                 85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -858,7 +986,10 @@ impl rt::AperDecode for RrcInactiveTransitionReport {
                 85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
                 92 => rt::ie::set_once(&mut s_rrc_state, 92, ie.decode()?)?,
                 121 => rt::ie::set_once(&mut s_user_location_information, 121, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -925,7 +1056,10 @@ impl rt::AperDecode for RetrieveUeInformation {
         for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
             match ie.id {
                 26 => rt::ie::set_once(&mut s_five_g_s_tmsi, 26, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1045,7 +1179,10 @@ impl rt::AperDecode for UeInformationTransfer {
                 209 => rt::ie::set_once(&mut s_ue_differentiation_info, 209, ie.decode()?)?,
                 34 => rt::ie::set_once(&mut s_masked_imeisv, 34, ie.decode()?)?,
                 414 => rt::ie::set_once(&mut s_partially_allowed_nssai, 414, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1152,7 +1289,10 @@ impl rt::AperDecode for RancpRelocationIndication {
                 25 => rt::ie::set_once(&mut s_eutra_cgi, 25, ie.decode()?)?,
                 213 => rt::ie::set_once(&mut s_tai, 213, ie.decode()?)?,
                 211 => rt::ie::set_once(&mut s_ul_cp_security_information, 211, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1282,7 +1422,10 @@ impl rt::AperDecode for HandoverRequired {
                 22 => rt::ie::set_once(&mut s_direct_forwarding_path_availability, 22, ie.decode()?)?,
                 61 => rt::ie::set_once(&mut s_pdu_session_resource_list_ho_rqd, 61, ie.decode()?)?,
                 101 => rt::ie::set_once(&mut s_source_to_target_transparent_container, 101, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1412,7 +1555,10 @@ impl rt::AperDecode for HandoverCommand {
                 78 => rt::ie::set_once(&mut s_pdu_session_resource_to_release_list_ho_cmd, 78, ie.decode()?)?,
                 106 => rt::ie::set_once(&mut s_target_to_source_transparent_container, 106, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1517,7 +1663,10 @@ impl rt::AperDecode for HandoverPreparationFailure {
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
                 262 => rt::ie::set_once(&mut s_targetto_source_failure_transparent_container, 262, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -1994,7 +2143,10 @@ impl rt::AperDecode for HandoverRequest {
                 430 => rt::ie::set_once(&mut s_sl_positioning_ranging_service_info, 430, ie.decode()?)?,
                 450 => rt::ie::set_once(&mut s_amf_ue_ngap_id2, 450, ie.decode()?)?,
                 455 => rt::ie::set_once(&mut s_target_ran_node_id, 455, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -2175,7 +2327,10 @@ impl rt::AperDecode for HandoverRequestAcknowledge {
                 259 => rt::ie::set_once(&mut s_npn_access_information, 259, ie.decode()?)?,
                 333 => rt::ie::set_once(&mut s_red_cap_indication, 333, ie.decode()?)?,
                 427 => rt::ie::set_once(&mut s_e_red_cap_indication, 427, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -2272,7 +2427,10 @@ impl rt::AperDecode for HandoverFailure {
                 15 => rt::ie::set_once(&mut s_cause, 15, ie.decode()?)?,
                 19 => rt::ie::set_once(&mut s_criticality_diagnostics, 19, ie.decode()?)?,
                 262 => rt::ie::set_once(&mut s_targetto_source_failure_transparent_container, 262, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
+                _ => {
+                    rt::ie::note_unknown(&ie);
+                    unknown_ies.push(ie)
+                }
             }
         }
         if extension {
@@ -2292,99 +2450,6 @@ impl HandoverFailure {
     /// The ids of the IEs this version of the specification defines for the message, in the order the
     /// specification requires them on the wire.
     pub const IE_IDS: &'static [u32] = &[10, 15, 19, 262];
-
-    /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
-    pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {
-        rt::ie::wire_ie_ids(content, true, rt::Size::range(0, 65535))
-    }
-}
-
-/// ASN.1 `HandoverNotify` (NGAP-PDU-Contents): the IEs of the message are the fields.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct HandoverNotify {
-    /// `id-AMF-UE-NGAP-ID` (id 10, Reject, Mandatory)
-    pub amf_ue_ngap_id: AmfUeNgapId,
-    /// `id-RAN-UE-NGAP-ID` (id 85, Reject, Mandatory)
-    pub ran_ue_ngap_id: RanUeNgapId,
-    /// `id-UserLocationInformation` (id 121, Ignore, Mandatory)
-    pub user_location_information: UserLocationInformation,
-    /// `id-NotifySourceNGRANNode` (id 269, Ignore, Optional)
-    pub notify_source_ngran_node: Option<NotifySourceNgranNode>,
-    /// IEs this version of the specification does not define here, as received (id, criticality, encoded value).
-    pub unknown_ies: Vec<rt::ie::RawIe>,
-}
-
-impl HandoverNotify {
-    /// A value with the mandatory IEs given and every optional one absent.
-    pub fn new(amf_ue_ngap_id: AmfUeNgapId, ran_ue_ngap_id: RanUeNgapId, user_location_information: UserLocationInformation) -> Self {
-        Self {
-            amf_ue_ngap_id,
-            ran_ue_ngap_id,
-            user_location_information,
-            notify_source_ngran_node: None,
-            unknown_ies: Vec::new(),
-        }
-    }
-}
-
-impl rt::AperEncode for HandoverNotify {
-    fn aper_encode(&self, w: &mut rt::BitWriter) -> rt::Result<()> {
-        w.write_bit(false); // extension marker: no additions
-        let mut ies: Vec<rt::ie::RawIe> = Vec::new();
-        {
-            let x = &self.amf_ue_ngap_id;
-            ies.push(rt::ie::RawIe::new(10, rt::ie::Criticality::Reject, x)?);
-        }
-        {
-            let x = &self.ran_ue_ngap_id;
-            ies.push(rt::ie::RawIe::new(85, rt::ie::Criticality::Reject, x)?);
-        }
-        {
-            let x = &self.user_location_information;
-            ies.push(rt::ie::RawIe::new(121, rt::ie::Criticality::Ignore, x)?);
-        }
-        if let Some(x) = &self.notify_source_ngran_node {
-            ies.push(rt::ie::RawIe::new(269, rt::ie::Criticality::Ignore, x)?);
-        }
-        ies.extend(self.unknown_ies.iter().cloned());
-        rt::ie::write_container(w, rt::Size::range(0, 65535), &ies)
-    }
-}
-
-impl rt::AperDecode for HandoverNotify {
-    fn aper_decode(r: &mut rt::BitReader<'_>) -> rt::Result<Self> {
-        let extension = r.read_bit()?;
-        let mut s_amf_ue_ngap_id: Option<AmfUeNgapId> = None;
-        let mut s_ran_ue_ngap_id: Option<RanUeNgapId> = None;
-        let mut s_user_location_information: Option<UserLocationInformation> = None;
-        let mut s_notify_source_ngran_node: Option<NotifySourceNgranNode> = None;
-        let mut unknown_ies = Vec::new();
-        for ie in rt::ie::read_container(r, rt::Size::range(0, 65535))? {
-            match ie.id {
-                10 => rt::ie::set_once(&mut s_amf_ue_ngap_id, 10, ie.decode()?)?,
-                85 => rt::ie::set_once(&mut s_ran_ue_ngap_id, 85, ie.decode()?)?,
-                121 => rt::ie::set_once(&mut s_user_location_information, 121, ie.decode()?)?,
-                269 => rt::ie::set_once(&mut s_notify_source_ngran_node, 269, ie.decode()?)?,
-                _ => unknown_ies.push(ie),
-            }
-        }
-        if extension {
-            r.read_extension_additions()?;
-        }
-        Ok(Self {
-            amf_ue_ngap_id: rt::ie::required(s_amf_ue_ngap_id, 10, rt::ie::Criticality::Reject)?,
-            ran_ue_ngap_id: rt::ie::required(s_ran_ue_ngap_id, 85, rt::ie::Criticality::Reject)?,
-            user_location_information: rt::ie::required(s_user_location_information, 121, rt::ie::Criticality::Ignore)?,
-            notify_source_ngran_node: s_notify_source_ngran_node,
-            unknown_ies,
-        })
-    }
-}
-
-impl HandoverNotify {
-    /// The ids of the IEs this version of the specification defines for the message, in the order the
-    /// specification requires them on the wire.
-    pub const IE_IDS: &'static [u32] = &[10, 85, 121, 269];
 
     /// The ids of the IEs in the encoded message `content`, in the order received (known or not).
     pub fn wire_ie_ids(content: &[u8]) -> rt::Result<Vec<u32>> {
